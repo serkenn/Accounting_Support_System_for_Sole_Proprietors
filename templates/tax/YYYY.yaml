@@ -1,0 +1,67 @@
+# ★このファイルの値は意図的にすべて空（null）です。
+#
+# 税制は毎年変わります。古い値を同梱すると、それを信じた人が誤った申告をします。
+# 国税庁のサイトで対象年分の最新の額を確認し、
+# 各項目の source_url と checked_on を埋めてから使ってください。
+#
+# 値が null のままの項目は、画面に「未設定」と表示されます。推測で埋めないでください。
+#
+# 使い方: このファイルを rules/tax/<年分>.yaml へコピーして記入します。
+
+_meta:
+  year: null
+  checked_on: null          # 確認した日（YYYY-MM-DD）
+  checked_by: null
+  note: >
+    ここに記入した値の責任は記入した本人にあります。
+    判断に迷う点は税理士または所轄の税務署に確認してください。
+
+# ── 経理方式（年度内で変更しない。第2部 §6.3）────────────────
+accounting:
+  method: null              # tax_included（税込経理）| tax_excluded（税抜経理）
+  rounding: null            # floor（切り捨て）| round | ceil  ※第4部 D15
+  rounding_unit: null       # 円未満の丸め単位
+
+# ── 所得控除（第5部 §5）──────────────────────────────────
+deductions:
+  basic_deduction: null                 # 基礎控除   source_url: , checked_on:
+  employment_income_deduction: null     # 給与所得控除（収入に応じた計算。表または式）
+  working_student_deduction: null       # 勤労学生控除
+  blue_return_special_deduction: null   # 青色申告特別控除（65万 / 55万 / 10万の別）
+
+# ── 各種閾値（第5部 §6）──────────────────────────────────
+# ★近年改正が入っています。必ず対象年分を確認してください。
+thresholds:
+  dependent_relative_limit: null        # 扶養控除の合計所得金額の上限
+  working_student_limit: null           # 勤労学生控除の上限
+  social_insurance_note: >
+    社会保険の加入基準は税制とは別の基準です。勤務先の規定を確認してください。
+    このシステムは税の見込みしか出しません。
+
+# ── 源泉徴収（第5部 §3.3）────────────────────────────────
+# 実額を正とし、これは差異検出のための参考値としてのみ使います。
+withholding:
+  rate_under_threshold: null            # 一定額以下の税率
+  rate_over_threshold: null             # 超過部分の税率
+  threshold_amount: null
+
+# ── 減価償却（第2部 §5.1）────────────────────────────────
+depreciation:
+  expense_immediately_under: null       # 消耗品費で即時費用化できる上限
+  lump_sum_3y_under: null               # 一括償却資産（3年均等）の上限
+  small_amount_special_under: null      # 少額減価償却資産の特例の上限
+  small_amount_special_annual_cap: null # 同特例の年間合計の上限
+  small_amount_special_expires_on: null # 同特例の適用期限。★必ず確認
+
+# ── 消費税・インボイス（第2部 §6）────────────────────────
+consumption_tax:
+  method: null                          # two_tenths（2割特例）| three_tenths（3割特例）
+                                        #   | simplified（簡易課税）| standard（本則課税）
+  method_valid_years: null
+  taxable_sales_threshold: null         # 課税事業者の判定に使う基準期間の売上高
+  ebook_search_relief_threshold: null   # 電帳法の検索要件の緩和措置の閾値（第2部 §2.2）
+  public_transport_exemption_under: null # 公共交通機関特例の上限（第6部 §2.3）
+
+# ── 通勤手当（第6部 §5.3）────────────────────────────────
+commute_allowance:
+  tax_free_limit_by_mode: null          # 交通手段・距離ごとの非課税限度額

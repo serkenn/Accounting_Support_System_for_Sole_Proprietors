@@ -1,0 +1,11 @@
+#!/bin/sh
+# コミットメッセージからも固有名詞は漏れる（第13部 §6.3）
+#   「AokiApp の請求書パース修正」→ 取引先名が漏れる
+#   機能で書くこと: 「fix(invoice): 明細行の税率別集計を修正」
+set -eu
+
+RUN="uv run --frozen"
+command -v uv >/dev/null 2>&1 || RUN="python3 -m"
+
+# shellcheck disable=SC2086
+$RUN shiwake redact-check --message-file "$1"

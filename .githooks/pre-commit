@@ -1,0 +1,15 @@
+#!/bin/sh
+# 公開リポジトリ — コミット前の機械的検査（第13部 §6.1 / 第1部 §11 S4）
+#
+# ここで止めるのが唯一の実用的な防衛線。公開 CI で検出できた時点では
+# 既に push されている（第13部 §6.1）。
+set -eu
+
+STAGED=$(git diff --cached --name-only --diff-filter=ACMR)
+[ -z "$STAGED" ] && exit 0
+
+RUN="uv run --frozen"
+command -v uv >/dev/null 2>&1 || RUN="python3 -m"
+
+# shellcheck disable=SC2086
+echo "$STAGED" | tr '\n' '\0' | xargs -0 $RUN shiwake redact-check --strict --

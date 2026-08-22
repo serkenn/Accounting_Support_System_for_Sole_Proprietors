@@ -1,0 +1,45 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # コミットメッセージの検査に履歴が要る
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --extra dev
+      - name: lint
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+      - name: test
+        run: uv run pytest
+
+  public-safe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --extra dev
+
+      # 第1部 §11 S5
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 第13部 §6.2
+      # 名前ベースの検査（第1層）はここでは動かない。リストを公開側に置けないため。
+      # 本命はローカルの pre-commit（第13部 §6.1）。
+      - name: check-public-safe
+        run: uv run shiwake check-public-safe --root .

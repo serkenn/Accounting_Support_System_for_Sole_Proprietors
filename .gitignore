@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# ★ 公開リポジトリに絶対に入れないもの（第13部 §7）
+.env
+.env.*
+*.tsr
+secrets*
+*secrets.*
+compose.yaml
+compose.yml
+docker-compose.yaml
+docker-compose.yml
+*.pem
+*.p12
+id_rsa*
+id_ed25519*
+
+# 固有名詞の一覧は非公開側に置く（第13部 §6.1）
+denylist.txt
+config/denylist.txt
+
+# 実データは公開側に存在してはいけない
+documents/
+ledger/
+links/
+evidence/
+exports/
+originals/
+out/
