@@ -6,5 +6,13 @@
 """
 
 from .check import BeanCheckResult, bean_check, bean_check_available
+from .query import bean_query_available, load_postings, run_query
 
-__all__ = ["BeanCheckResult", "bean_check", "bean_check_available"]
+__all__ = [
+    "BeanCheckResult",
+    "bean_check",
+    "bean_check_available",
+    "bean_query_available",
+    "load_postings",
+    "run_query",
+]

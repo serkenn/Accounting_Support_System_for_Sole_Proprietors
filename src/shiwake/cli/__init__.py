@@ -11,10 +11,13 @@ import sys
 from pathlib import Path
 
 from shiwake import validate as vd
-from shiwake.ledger import bean_check
+from shiwake.ledger import bean_check, load_postings
 from shiwake.ledger.check import BeanCheckMissingError
+from shiwake.ledger.query import BeanQueryMissingError
 from shiwake.safety import Denylist, Scanner
 from shiwake.safety import public_safe as ps
+from shiwake.scopes import load_scopes
+from shiwake.tax import check_mapping_coverage, load_mapping
 
 
 def _add_denylist_arg(p: argparse.ArgumentParser) -> None:
@@ -121,6 +124,46 @@ def cmd_bean_check(args: argparse.Namespace) -> int:
     return 0 if result.ok else 1
 
 
+def cmd_scope_check(args: argparse.Namespace) -> int:
+    """所得区分と名前空間の検査（第5部 §11 / 第10部 §8）。"""
+    rules_path = Path(args.rules)
+    if not rules_path.is_file():
+        print(f"ERROR   {rules_path} がありません", file=sys.stderr)
+        return 1
+    scopes = load_scopes(rules_path)
+
+    try:
+        postings = load_postings(Path(args.main))
+    except BeanQueryMissingError as e:
+        print(f"ERROR   {e}", file=sys.stderr)
+        return 1
+    except FileNotFoundError as e:
+        print(f"ERROR   元帳が見つかりません: {e}", file=sys.stderr)
+        return 1
+
+    accounts = {p.account for p in postings}
+    issues = scopes.check_classification(accounts)
+    issues.extend(scopes.check_crossings(postings))
+    issues.extend(scopes.check_invariant(postings))
+
+    # 決算書への対応づけ。抜けていると P/L から黙って落ちる（第2部 §7.2）
+    mapping_path = Path(args.mapping)
+    if mapping_path.is_file():
+        issues.extend(check_mapping_coverage(accounts, load_mapping(mapping_path)))
+    else:
+        print(f"NOTE    {mapping_path} がないため決算書の対応づけは検査しません", file=sys.stderr)
+
+    for i in issues:
+        print(i.format(), file=sys.stderr)
+
+    errors = [i for i in issues if i.severity == "error"]
+    print(
+        f"\nscope-check: {len(postings)} posting / error {len(errors)} 件",
+        file=sys.stderr,
+    )
+    return 1 if errors else 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="shiwake", description="証憑から仕訳を組み立てるツールキット"
@@ -142,6 +185,12 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("bean-check", help="元帳の検査（bean-check を呼ぶ）")
     p.add_argument("--main", default="ledger/main.beancount", help="元帳の入口ファイル")
     p.set_defaults(func=cmd_bean_check)
+
+    p = sub.add_parser("scope-check", help="所得区分と名前空間の検査（第5部 §11）")
+    p.add_argument("--main", default="ledger/main.beancount", help="元帳の入口ファイル")
+    p.add_argument("--rules", default="rules/scopes.yaml", help="範囲と規則の定義")
+    p.add_argument("--mapping", default="rules/aoiro_mapping.yaml", help="決算書へのマッピング")
+    p.set_defaults(func=cmd_scope_check)
 
     p = sub.add_parser("check-public-safe", help="公開リポジトリの安全性検査（第13部 §6.2）")
     p.add_argument("--root", default=".", help="リポジトリのルート")
