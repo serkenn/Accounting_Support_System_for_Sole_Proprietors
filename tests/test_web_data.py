@@ -14,7 +14,9 @@ import pytest
 from shiwake.scopes import load_scopes
 from shiwake.web import LedgerPosting, build_web_data
 
-RULES = Path(__file__).resolve().parents[2] / "ledger-data" / "rules" / "scopes.yaml"
+# ★公開側のテストは公開側だけで完結させる（第13部 §5）。
+#   非公開リポジトリを参照すると、それが無い環境で落ちる。
+RULES = Path(__file__).resolve().parents[1] / "templates" / "scopes.yaml"
 
 
 @pytest.fixture

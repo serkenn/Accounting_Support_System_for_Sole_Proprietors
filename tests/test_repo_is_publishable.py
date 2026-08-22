@@ -69,3 +69,34 @@ def test_every_source_file_is_tracked_by_git():
     }
     missing = sorted(on_disk - tracked)
     assert not missing, "git が追跡していないソースがあります: " + ", ".join(missing)
+
+
+def test_tests_do_not_reach_outside_the_repository():
+    """★公開側のテストは公開側だけで完結すること（第13部 §5）。
+
+    非公開リポジトリを参照すると、それが無い環境（CI・他人の手元）で落ちる。
+    しかも手元では通るので気づけない。
+    """
+    import re
+
+    offenders = []
+    pattern = re.compile(r"parents\[\s*[2-9]\s*\]|\.\./\.\.|ledger-data")
+    this_file = Path(__file__).name
+    for path in sorted((ROOT / "tests").glob("*.py")):
+        if path.name == this_file:
+            continue  # この検査自身のパターン文字列に反応させない
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if line.lstrip().startswith("#"):
+                continue
+            if pattern.search(line):
+                offenders.append(f"{path.name}:{lineno}")
+    assert not offenders, "リポジトリの外を参照しています: " + ", ".join(offenders)
+
+
+def test_makefile_does_not_require_the_private_repository():
+    """make check が非公開リポジトリ前提だと、公開側だけでは通らない。"""
+    text = (ROOT / "Makefile").read_text(encoding="utf-8")
+    for line in text.splitlines():
+        if "ledger-data" in line and not line.lstrip().startswith("#"):
+            # DENYLIST は「あれば使う」形なので許す
+            assert "DENYLIST" in line, f"非公開リポジトリに依存しています: {line.strip()}"

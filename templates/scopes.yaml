@@ -1,0 +1,119 @@
+# ビューの範囲と、混入を禁じる規則（テンプレート）
+#
+# SYNTHETIC — このファイルは雛形です。実際の設定はデータリポジトリ側の
+# rules/scopes.yaml にあります。ここに固有の値を書かないでください。
+#
+# ★仕様書（第5部 §12・第12部 §8）が参照しているが、形が定義されていなかった
+#   ファイルです。次の3つの用途を1箇所にまとめました。
+#
+#     1. 画面の「家計 / 事業」切替の範囲（第5部 §9.1）
+#     2. 決算書・課税売上高・合計所得金額に**入れてはいけない**科目
+#     3. 名前空間をまたぐ仕訳の規則
+#
+#   2 が本体です。所得区分の取り違えは申告の誤りに直結するので、
+#   人の注意力ではなく機械で止めます（`shiwake scope-check`）。
+#
+# パターンは科目名の前方一致。末尾の * は「その配下すべて」を意味します。
+
+version: 1
+
+# ══════════════════════════════════════════════════════
+# 1. ビューの範囲
+# ══════════════════════════════════════════════════════
+scopes:
+  business:
+    label: 事業
+    description: 青色申告決算書の P/L・B/S に載る範囲
+    include:
+      - "Assets:Business:*"
+      - "Liabilities:Business:*"
+      - "Income:Business:*"
+      - "Expenses:Business:*"
+      - "Equity:Owner:*"
+      - "Equity:Opening-Balances"
+
+  household:
+    label: 家計
+    description: 日常。事業も給与も生活費も全部入る
+    include:
+      - "*"
+
+# ══════════════════════════════════════════════════════
+# 2. 集計への混入を禁じる規則  ★ここが本体
+# ══════════════════════════════════════════════════════
+guards:
+  - id: no_employment_income_in_business
+    aggregate: business_pl
+    forbid: "Income:Employment:*"
+    severity: error
+    reason: >
+      給与所得は事業所得ではありません。決算書に混ぜると所得を過大に申告します（第5部 §1）。
+
+  - id: no_other_income_in_business
+    aggregate: business_pl
+    forbid: "Income:Other:*"
+    severity: error
+    reason: >
+      奨学金などの雑収入。非課税のものを含むため決算書には載せません（第2部 §7.2・第10部 §2）。
+
+  - id: no_personal_accounts_in_business
+    aggregate: business_pl
+    forbid: "*:Personal:*"
+    severity: error
+    reason: >
+      家計の資産負債を B/S に載せると、決算書として使えなくなります（第5部 §2）。
+
+  - id: no_employment_income_in_taxable_sales
+    aggregate: taxable_sales
+    forbid: "Income:Employment:*"
+    severity: error
+    reason: >
+      給与は消費税の課税対象外（不課税）です。課税売上高の判定に含めません（第5部 §7）。
+
+  - id: no_scholarship_in_taxable_sales
+    aggregate: taxable_sales
+    forbid: "Income:Other:Scholarship:*"
+    severity: error
+    reason: >
+      給付型奨学金は非課税です。課税売上高の判定に含めません（第10部 §2）。
+
+  - id: no_scholarship_in_total_income
+    aggregate: total_income
+    forbid: "Income:Other:Scholarship:*"
+    severity: error
+    reason: >
+      学資に充てるため給付される金品は原則非課税なので、合計所得金額に含めません。
+      扶養や勤労学生控除の判定にも影響しません（第10部 §2）。
+
+# 集計ごとに「入れてよいもの」も宣言しておく。
+# forbid だけだと、新しい科目が増えたときに黙って混入します。
+aggregates:
+  business_pl:
+    label: 事業の損益
+    allow: ["Income:Business:*", "Expenses:Business:*"]
+  business_bs:
+    label: 事業の貸借
+    allow:
+      - "Assets:Business:*"
+      - "Liabilities:Business:*"
+      - "Equity:Owner:*"
+      - "Equity:Opening-Balances"
+  taxable_sales:
+    label: 消費税の課税売上高
+    allow: ["Income:Business:*"]
+  total_income:
+    label: 合計所得金額
+    allow: ["Income:Business:*", "Expenses:Business:*", "Income:Employment:*"]
+
+# ══════════════════════════════════════════════════════
+# 3. 名前空間をまたぐ仕訳の規則
+# ══════════════════════════════════════════════════════
+crossing:
+  description: >
+    Business と Personal の間で価値が動くときは、必ず資本の科目と
+    それに対応する持分の科目を対で立てます。直接の振替は書きません。
+  namespaces: ["Business", "Personal"]
+  bridge_equity: "Equity:Owner:*"
+  bridge_asset: "Assets:Personal:BusinessInterest"
+  # 常に成り立つべき恒等式（Q2 で選んだモデル）
+  invariant: "sum(bridge_asset) + sum(bridge_equity) == 0"
