@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from .derive import build_derivatives
 from .magic import ALLOWED_MEDIA_TYPES, detect
 from .manifest import Manifest, ManifestEntry
 from .origin import resolve
@@ -49,6 +50,8 @@ class Ingested:
     needs_review: bool
     source_name: str
     hint: dict | None = None
+    page_count: int = 1
+    derivative_error: str | None = None
 
 
 @dataclass(frozen=True)
@@ -80,6 +83,9 @@ class IngestResult:
             f"  要レビュー  {sum(1 for i in self.succeeded if i.needs_review)}件",
             f"  失敗        {len(self.failed)}件",
         ]
+        broken = [i for i in self.succeeded if i.derivative_error]
+        if broken:
+            lines.append(f"  プレビュー生成に失敗 {len(broken)}件（原本は取り込み済み）")
         if self.failed:
             lines.append(f"              → inbox/{FAILED_DIR}/ を確認してください")
         return "\n".join(lines)
@@ -177,6 +183,8 @@ def _ingest_one(
     decision = resolve(rel, fmt, head)
     stored = _store_path(files, sha, fmt.extension)
     size = path.stat().st_size
+    # ★移動する前に読む。移動後は元のパスに無い
+    hint = _read_hint(path)
 
     if not dry_run:
         stored.parent.mkdir(parents=True, exist_ok=True)
@@ -197,6 +205,16 @@ def _ingest_one(
             )
         )
 
+    # 表示用派生（第9部 §3.3 ステップ5）。
+    # 失敗しても取り込み自体は成功とする。原本は既に確定しているので、
+    # 派生はあとから作り直せる。
+    page_count = 1
+    derivative_error = None
+    if not dry_run:
+        derived = build_derivatives(stored, sha, files)
+        page_count = derived.page_count
+        derivative_error = derived.error
+
     seen.add(sha)
     return Ingested(
         sha256=sha,
@@ -208,7 +226,9 @@ def _ingest_one(
         origin_reason=decision.reason,
         needs_review=decision.needs_review,
         source_name=str(rel),
-        hint=_read_hint(path),
+        hint=hint,
+        page_count=page_count,
+        derivative_error=derivative_error,
     )
 
 
