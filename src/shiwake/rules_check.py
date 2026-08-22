@@ -93,6 +93,19 @@ def _check_card_schedule(entry: dict, target: str) -> list[RuleIssue]:
     しかも**ズレても元帳の貸借は合う**ので、検算では気づけない。
     """
     issues: list[RuleIssue] = []
+
+    # ★引落口座が決まらないと、引落の仕訳そのものが作れない（第1部 §6）。
+    #   締め日だけあっても、どこから落ちるか分からなければ元帳に書けない。
+    if not entry.get("debit_account"):
+        issues.append(
+            RuleIssue(
+                "warning",
+                target,
+                "debit_account が未設定です。引落の仕訳が作れません。"
+                "明細か会員サイトで引落口座を確認してください",
+            )
+        )
+
     schedule = ("closing_day", "debit_day")
     missing = [f for f in schedule if entry.get(f) is None]
 

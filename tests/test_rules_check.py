@@ -21,6 +21,7 @@ CARD = """
         namespace: mixed
         liability_account: "Liabilities:Personal:CreditCard:Main"
         card_last4: "1234"
+        debit_account: "Assets:Personal:Bank:Main"
         closing_day: 15
         debit_day: 10
         verified_on: 2026-08-23
@@ -97,3 +98,34 @@ def test_bank_entries_are_checked_too(tmp_path):
 
 def test_missing_file_is_not_an_error(tmp_path):
     assert check_accounts(tmp_path / "absent.yaml") == []
+
+
+def test_missing_debit_account_warns(tmp_path):
+    """★引落口座が決まらないと、引落の仕訳そのものが作れない。
+
+    締め日だけ分かっても、どこから落ちるか分からなければ元帳に書けない。
+    """
+    body = CARD.replace('debit_account: "Assets:Personal:Bank:Main"', "debit_account: null")
+    issues = check_accounts(write(tmp_path, body))
+    assert any("引落の仕訳が作れません" in i.message for i in issues)
+
+
+def test_card_with_everything_unknown_warns_but_does_not_error(tmp_path):
+    """★分からないものは null で置ける。埋めるまで警告が出続ける。
+
+    推測で埋めるより、分からないまま警告が出ている方がよい。
+    """
+    body = """
+        cards:
+          - id: later
+            namespace: mixed
+            liability_account: "Liabilities:Personal:CreditCard:Later"
+            card_last4: "1234"
+            debit_account: null
+            closing_day: null
+            debit_day: null
+            verified_on: null
+    """
+    issues = check_accounts(write(tmp_path, body))
+    assert issues
+    assert all(i.severity == "warning" for i in issues)
