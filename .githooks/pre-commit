@@ -12,4 +12,5 @@ RUN="uv run --frozen"
 command -v uv >/dev/null 2>&1 || RUN="python3 -m"
 
 # shellcheck disable=SC2086
-echo "$STAGED" | tr '\n' '\0' | xargs -0 $RUN shiwake redact-check --strict --
+echo "$STAGED" | tr '\n' '\0' | xargs -0 # LICENSE の著作権者名は公開が前提（Makefile の safe を参照）
+$RUN shiwake redact-check --strict --exclude LICENSE --

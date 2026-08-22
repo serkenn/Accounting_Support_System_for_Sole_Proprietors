@@ -42,4 +42,4 @@ jobs:
       # 名前ベースの検査（第1層）はここでは動かない。リストを公開側に置けないため。
       # 本命はローカルの pre-commit（第13部 §6.1）。
       - name: check-public-safe
-        run: uv run shiwake check-public-safe --root .
+        run: uv run shiwake check-public-safe --root . --exclude LICENSE

@@ -57,13 +57,14 @@ def cmd_redact_check(args: argparse.Namespace) -> int:
 def cmd_check_public_safe(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
     denylist = Denylist.discover(args.denylist)
+    exclude = tuple(args.exclude)
 
     problems = (
         ps.check_forbidden_files(root)
         + ps.check_fixtures_are_synthetic(root)
         + ps.check_tax_templates_are_null(root)
     )
-    findings = ps.check_patterns(root, denylist) + ps.check_commit_messages(root, denylist)
+    findings = ps.check_patterns(root, denylist, exclude) + ps.check_commit_messages(root, denylist)
     gitleaks_ok, gitleaks_msg = ps.run_gitleaks(root)
 
     for p in problems:
@@ -101,6 +102,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("check-public-safe", help="公開リポジトリの安全性検査（第13部 §6.2）")
     p.add_argument("--root", default=".", help="リポジトリのルート")
+    p.add_argument("--exclude", action="append", default=[], help="除外するパス（複数指定可）")
     _add_denylist_arg(p)
     p.set_defaults(func=cmd_check_public_safe)
 

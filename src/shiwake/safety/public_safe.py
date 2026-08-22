@@ -57,28 +57,57 @@ SKIP_DIRS = frozenset(
 
 SYNTHETIC_MARKER = "SYNTHETIC"
 
-TEXT_SUFFIXES = frozenset(
+#: 既知のバイナリ。これ以外は「テキストかもしれない」として検査する。
+#: 許可リスト方式にすると LICENSE / Makefile / Dockerfile / フックスクリプトなど
+#: 拡張子の無いファイルが丸ごと検査から漏れる。
+BINARY_SUFFIXES = frozenset(
     {
-        ".py",
-        ".md",
-        ".txt",
-        ".json",
-        ".jsonl",
-        ".yaml",
-        ".yml",
-        ".toml",
-        ".ts",
-        ".tsx",
-        ".js",
-        ".jsx",
-        ".css",
-        ".html",
-        ".beancount",
-        ".csv",
-        ".cfg",
-        ".ini",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".webp",
+        ".heic",
+        ".heif",
+        ".bmp",
+        ".ico",
+        ".tiff",
+        ".pdf",
+        ".zip",
+        ".gz",
+        ".bz2",
+        ".xz",
+        ".tar",
+        ".7z",
+        ".woff",
+        ".woff2",
+        ".ttf",
+        ".otf",
+        ".eot",
+        ".so",
+        ".dylib",
+        ".dll",
+        ".exe",
+        ".bin",
+        ".o",
+        ".a",
+        ".mp3",
+        ".mp4",
+        ".mov",
+        ".wav",
+        ".avi",
+        ".webm",
+        ".tsr",
+        ".p12",
+        ".pfx",
+        ".der",
     }
 )
+
+
+def is_probably_text(path: Path) -> bool:
+    """バイナリと分かっているもの以外はテキスト扱いにする（取りこぼさない側に倒す）。"""
+    return path.suffix.lower() not in BINARY_SUFFIXES
 
 
 @dataclass(frozen=True)
@@ -159,7 +188,7 @@ def check_fixtures_are_synthetic(root: Path) -> list[Problem]:
             continue
         if str(rel) in listed:
             continue
-        if path.suffix.lower() in TEXT_SUFFIXES:
+        if is_probably_text(path):
             try:
                 text = path.read_text(encoding="utf-8")
             except UnicodeDecodeError:
@@ -226,12 +255,20 @@ def check_tax_templates_are_null(root: Path) -> list[Problem]:
     return problems
 
 
-def check_patterns(root: Path, denylist: Denylist | None = None) -> list[Finding]:
-    """パターンベースの検査を全ファイルに掛ける（strict）。"""
-    scanner = Scanner(denylist=denylist, strict=True)
+def check_patterns(
+    root: Path,
+    denylist: Denylist | None = None,
+    exclude: Iterable[str] = (),
+) -> list[Finding]:
+    """パターンベースの検査を全ファイルに掛ける（strict）。
+
+    exclude には「そこに固有名詞があるのが正しい」ファイルだけを挙げる。
+    現状は LICENSE のみ（著作権者名は公開されることが前提のため）。
+    """
+    scanner = Scanner(denylist=denylist, strict=True, exclude=exclude)
     findings: list[Finding] = []
     for path in _iter_files(root):
-        if path.suffix.lower() not in TEXT_SUFFIXES:
+        if not is_probably_text(path):
             continue
         findings.extend(scanner.scan_file(path))
     return findings

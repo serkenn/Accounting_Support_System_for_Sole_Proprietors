@@ -229,3 +229,23 @@ def test_proper_noun_in_commit_message_is_caught(tmp_path):
 def test_commit_scan_is_skipped_without_denylist(tmp_path):
     root = _git_repo(tmp_path, "fix: 架空商事の請求書パースを修正")
     assert ps.check_commit_messages(root, Denylist([])) == []
+
+
+def test_exclusions_are_honoured(tmp_path):
+    """LICENSE の著作権者名だけは例外にする。
+
+    著作権表示は公開されることが前提であり、伏せると MIT の要件を満たせない。
+    例外はこの1ファイルに限り、増やすときは Makefile に理由を書く。
+    """
+    root = _repo(tmp_path)
+    (root / "LICENSE").write_text("Copyright (c) 2026 架空商事", encoding="utf-8")
+    dl = Denylist(["架空商事"])
+    assert any(f.rule == "denylist" for f in ps.check_patterns(root, dl))
+    assert ps.check_patterns(root, dl, exclude=["LICENSE"]) == []
+
+
+def test_exclusion_does_not_leak_to_other_files(tmp_path):
+    root = _repo(tmp_path)
+    (root / "src" / "x.py").write_text('NAME = "架空商事"\n', encoding="utf-8")
+    dl = Denylist(["架空商事"])
+    assert any(f.rule == "denylist" for f in ps.check_patterns(root, dl, exclude=["LICENSE"]))
