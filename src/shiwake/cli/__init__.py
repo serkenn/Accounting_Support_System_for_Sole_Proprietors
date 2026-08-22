@@ -28,6 +28,7 @@ from shiwake.ledger import (
 from shiwake.ledger.check import BeanCheckMissingError
 from shiwake.ledger.documents import load_month
 from shiwake.ledger.query import BeanQueryMissingError
+from shiwake.rules_check import check_accounts
 from shiwake.safety import Denylist, Scanner
 from shiwake.safety import public_safe as ps
 from shiwake.safety.data_repo import check_no_app_code
@@ -403,6 +404,17 @@ def cmd_build_web_data(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_check_rules(args: argparse.Namespace) -> int:
+    """口座・カードのマスタの検査（第1部 D5 / 第4部 §1）。"""
+    issues = check_accounts(Path(args.accounts))
+    for i in issues:
+        print(i.format(), file=sys.stderr)
+    errors = [i for i in issues if i.severity == "error"]
+    warnings = [i for i in issues if i.severity == "warning"]
+    print(f"\ncheck-rules: error {len(errors)} 件 / warning {len(warnings)} 件", file=sys.stderr)
+    return 1 if errors else 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="shiwake", description="証憑から仕訳を組み立てるツールキット"
@@ -443,6 +455,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out", default="web/public/data", help="出力先")
     p.add_argument("--note", default=None, help="meta.json に添える注記")
     p.set_defaults(func=cmd_build_web_data)
+
+    p = sub.add_parser("check-rules", help="口座・カードのマスタの検査（第1部 D5）")
+    p.add_argument("--accounts", default="rules/accounts.yaml", help="口座マスタ")
+    p.set_defaults(func=cmd_check_rules)
 
     p = sub.add_parser("validate", help="document の検証（第1部 §9）")
     p.add_argument("paths", nargs="*", help="検証する JSON またはディレクトリ")
