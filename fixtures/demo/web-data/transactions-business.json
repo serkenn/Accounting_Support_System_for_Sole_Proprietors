@@ -1,0 +1,92 @@
+{
+  "scope": "business",
+  "transactions": [
+    {
+      "id": "111a636864b90bec8b0658e051339b4d",
+      "date": "2026-07-09",
+      "payee": "サンプル電機 本店",
+      "narration": "",
+      "account": "Expenses:Business:Supplies",
+      "amount": 12800,
+      "doc_id": "doc_2026-07-09_sample_002713",
+      "card_line": "doc_2026-08-01_samplecard_002711:L003",
+      "pending": false,
+      "postings": [
+        {
+          "account": "Assets:Personal:BusinessInterest",
+          "amount": 12800
+        },
+        {
+          "account": "Equity:Owner:Contributions",
+          "amount": -12800
+        },
+        {
+          "account": "Expenses:Business:Supplies",
+          "amount": 12800
+        },
+        {
+          "account": "Liabilities:Personal:CreditCard:Sample",
+          "amount": -12800
+        }
+      ]
+    },
+    {
+      "id": "4ca740ccc9239ca5f67b08a5004ec207",
+      "date": "2026-07-18",
+      "payee": "架空クラウド",
+      "narration": "",
+      "account": "Expenses:Business:Communication",
+      "amount": 2200,
+      "doc_id": "doc_2026-07-18_sample_002716",
+      "card_line": "doc_2026-08-01_samplecard_002711:L007",
+      "pending": false,
+      "postings": [
+        {
+          "account": "Assets:Personal:BusinessInterest",
+          "amount": 2200
+        },
+        {
+          "account": "Equity:Owner:Contributions",
+          "amount": -2200
+        },
+        {
+          "account": "Expenses:Business:Communication",
+          "amount": 2200
+        },
+        {
+          "account": "Liabilities:Personal:CreditCard:Sample",
+          "amount": -2200
+        }
+      ]
+    },
+    {
+      "id": "47b963c7c595e12588dc381feb3513a6",
+      "date": "2026-07-28",
+      "payee": "サンプルデンキ",
+      "narration": "",
+      "account": "Expenses:Business:Supplies",
+      "amount": 4500,
+      "doc_id": null,
+      "card_line": "doc_2026-08-01_samplecard_002711:L010",
+      "pending": false,
+      "postings": [
+        {
+          "account": "Assets:Personal:BusinessInterest",
+          "amount": 4500
+        },
+        {
+          "account": "Equity:Owner:Contributions",
+          "amount": -4500
+        },
+        {
+          "account": "Expenses:Business:Supplies",
+          "amount": 4500
+        },
+        {
+          "account": "Liabilities:Personal:CreditCard:Sample",
+          "amount": -4500
+        }
+      ]
+    }
+  ]
+}

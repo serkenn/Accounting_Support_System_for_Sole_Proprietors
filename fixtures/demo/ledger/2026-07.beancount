@@ -1,19 +1,19 @@
 ;; SYNTHETIC — 合成データから生成した元帳です。実在の取引ではありません。
 ;; このファイルは生成物です。手で編集しません。
 
-2026-07-03 * "サンプルストア 和多田店"
+2026-07-03 * "サンプルストア 和多田店" ""
   card_line: "doc_2026-08-01_samplecard_002711:L001"
   doc_id: "doc_2026-07-03_sample_002711"
   Expenses:Personal:Food:Groceries                        1,580 JPY
   Liabilities:Personal:CreditCard:Sample
 
-2026-07-05 * "架空カフェ"
+2026-07-05 * "架空カフェ" ""
   card_line: "doc_2026-08-01_samplecard_002711:L002"
   doc_id: "doc_2026-07-05_sample_002712"
   Expenses:Personal:Food:Eatout                             680 JPY
   Liabilities:Personal:CreditCard:Sample
 
-2026-07-09 * "サンプル電機 本店"
+2026-07-09 * "サンプル電機 本店" ""
   card_line: "doc_2026-08-01_samplecard_002711:L003"
   doc_id: "doc_2026-07-09_sample_002713"
   Expenses:Business:Supplies                             12,800 JPY
@@ -21,29 +21,29 @@
   Assets:Personal:BusinessInterest                       12,800 JPY
   Liabilities:Personal:CreditCard:Sample                -12,800 JPY
 
-2026-07-12 * "サンプルストア 和多田店"
+2026-07-12 * "サンプルストア 和多田店" ""
   card_line: "doc_2026-08-01_samplecard_002711:L004"
   doc_id: "doc_2026-07-12_sample_002714"
   Expenses:Personal:Food:Groceries                        2,340 JPY
   Liabilities:Personal:CreditCard:Sample
 
-2026-07-14 * "カクウショテン"
+2026-07-14 * "カクウショテン" ""
   card_line: "doc_2026-08-01_samplecard_002711:L006"
   Expenses:Personal:Education:Books                       3,200 JPY
   Liabilities:Personal:CreditCard:Sample
 
-2026-07-14 * "架空書店"
+2026-07-14 * "架空書店" ""
   card_line: "doc_2026-08-01_samplecard_002711:L005"
   doc_id: "doc_2026-07-14_sample_002715"
   Expenses:Personal:Education:Books                       3,200 JPY
   Liabilities:Personal:CreditCard:Sample
 
-2026-07-16 * "サンプルストア 和多田店"
+2026-07-16 * "サンプルストア 和多田店" ""
   doc_id: "doc_2026-07-16_sample_002719"
   Expenses:Personal:Food:Groceries                          520 JPY
   Assets:Personal:Cash
 
-2026-07-18 * "架空クラウド"
+2026-07-18 * "架空クラウド" ""
   card_line: "doc_2026-08-01_samplecard_002711:L007"
   doc_id: "doc_2026-07-18_sample_002716"
   Expenses:Business:Communication                         2,200 JPY
@@ -51,32 +51,32 @@
   Assets:Personal:BusinessInterest                        2,200 JPY
   Liabilities:Personal:CreditCard:Sample                 -2,200 JPY
 
-2026-07-21 * "サンプルストア 和多田店"
+2026-07-21 * "サンプルストア 和多田店" ""
   card_line: "doc_2026-08-01_samplecard_002711:L008"
   doc_id: "doc_2026-07-21_sample_002717"
   Expenses:Personal:Food:Groceries                          890 JPY
   Liabilities:Personal:CreditCard:Sample
 
-2026-07-25 * "架空鉄道"
+2026-07-25 * "架空鉄道" ""
   card_line: "doc_2026-08-01_samplecard_002711:L009"
   doc_id: "doc_2026-07-25_sample_002718"
   Expenses:Personal:Transport:Train                         460 JPY
   Liabilities:Personal:CreditCard:Sample
 
-2026-07-28 * "サンプルデンキ"
+2026-07-28 * "サンプルデンキ" ""
   card_line: "doc_2026-08-01_samplecard_002711:L010"
   Expenses:Business:Supplies                              4,500 JPY
   Equity:Owner:Contributions                             -4,500 JPY
   Assets:Personal:BusinessInterest                        4,500 JPY
   Liabilities:Personal:CreditCard:Sample                 -4,500 JPY
 
-2026-08-02 * "架空カフェ" #pending
+2026-08-02 * "架空カフェ" "" #pending
   doc_id: "doc_2026-08-02_sample_00271a"
   pending: "TRUE"
   Expenses:Personal:Food:Eatout                             950 JPY
   Liabilities:Personal:CreditCard:Sample
 
-2026-08-27 * "サンプルカード 7月分引落"
+2026-08-27 * "サンプルカード 7月分引落" ""
   statement: "doc_2026-08-01_samplecard_002711"
   Liabilities:Personal:CreditCard:Sample                 31,850 JPY
   Assets:Personal:Bank:Sample                           -31,850 JPY

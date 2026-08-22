@@ -1,0 +1,11 @@
+{
+  "scope": "business",
+  "monthly": [
+    {
+      "month": "2026-07",
+      "income": 0,
+      "expense": 19500,
+      "net": -19500
+    }
+  ]
+}

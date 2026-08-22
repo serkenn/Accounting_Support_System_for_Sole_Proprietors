@@ -1,0 +1,15 @@
+{
+  "needs_review": {
+    "count": 0,
+    "doc_ids": []
+  },
+  "pending": {
+    "count": 1,
+    "transaction_ids": [
+      "6c3f47193d38a648d31092ba7d7b6ac3"
+    ]
+  },
+  "receipts_awaiting_statement": {
+    "count": 9
+  }
+}

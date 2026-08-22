@@ -1,0 +1,45 @@
+{
+  "scope": "household",
+  "months": {
+    "2026-07": [
+      {
+        "namespace": "business",
+        "category": "Supplies",
+        "amount": 17300,
+        "ratio": 0.5344
+      },
+      {
+        "namespace": "personal",
+        "category": "Education",
+        "amount": 6400,
+        "ratio": 0.1977
+      },
+      {
+        "namespace": "personal",
+        "category": "Food",
+        "amount": 6010,
+        "ratio": 0.1857
+      },
+      {
+        "namespace": "business",
+        "category": "Communication",
+        "amount": 2200,
+        "ratio": 0.068
+      },
+      {
+        "namespace": "personal",
+        "category": "Transport",
+        "amount": 460,
+        "ratio": 0.0142
+      }
+    ],
+    "2026-08": [
+      {
+        "namespace": "personal",
+        "category": "Food",
+        "amount": 950,
+        "ratio": 1.0
+      }
+    ]
+  }
+}

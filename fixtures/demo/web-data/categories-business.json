@@ -1,0 +1,20 @@
+{
+  "scope": "business",
+  "months": {
+    "2026-07": [
+      {
+        "namespace": "business",
+        "category": "Supplies",
+        "amount": 17300,
+        "ratio": 0.8872
+      },
+      {
+        "namespace": "business",
+        "category": "Communication",
+        "amount": 2200,
+        "ratio": 0.1128
+      }
+    ],
+    "2026-08": []
+  }
+}

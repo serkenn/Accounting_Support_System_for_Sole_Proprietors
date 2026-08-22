@@ -1,0 +1,17 @@
+{
+  "scope": "household",
+  "monthly": [
+    {
+      "month": "2026-07",
+      "income": 0,
+      "expense": 32370,
+      "net": -32370
+    },
+    {
+      "month": "2026-08",
+      "income": 0,
+      "expense": 950,
+      "net": -950
+    }
+  ]
+}

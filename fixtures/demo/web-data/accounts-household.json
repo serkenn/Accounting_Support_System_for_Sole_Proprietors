@@ -1,0 +1,21 @@
+{
+  "scope": "household",
+  "accounts": [
+    {
+      "account": "Assets:Personal:Bank:Sample",
+      "balance": 168150
+    },
+    {
+      "account": "Assets:Personal:BusinessInterest",
+      "balance": 19500
+    },
+    {
+      "account": "Assets:Personal:Cash",
+      "balance": 4480
+    },
+    {
+      "account": "Liabilities:Personal:CreditCard:Sample",
+      "balance": -950
+    }
+  ]
+}

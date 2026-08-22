@@ -70,9 +70,9 @@ class Transaction:
 
     def render(self) -> str:
         tags = "".join(f" #{t}" for t in self.tags)
-        head = f'{self.date.isoformat()} * "{self.payee}"'
-        if self.narration:
-            head += f' "{self.narration}"'
+        # ★Beancount は文字列1つだと narration として読む。
+        #   payee にするには必ず2つ書く。1つだと取引先が空になる。
+        head = f'{self.date.isoformat()} * "{self.payee}" "{self.narration}"'
         lines = [head + tags]
         lines += [f'  {k}: "{v}"' for k, v in sorted(self.meta.items())]
         lines += [p.render() for p in self.postings]

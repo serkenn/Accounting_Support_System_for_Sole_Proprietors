@@ -1,0 +1,229 @@
+{
+  "documents": [
+    {
+      "doc_id": "doc_2026-07-03_sample_002711",
+      "type": "receipt",
+      "origin": "paper",
+      "needs_review": false,
+      "review_reason": null,
+      "issuer": "サンプルストア 和多田店",
+      "issued_at": "2026-07-03T12:00:00+09:00",
+      "total": 1580,
+      "tax_breakdown": [
+        {
+          "rate": 0.1,
+          "taxable_amount": 1436,
+          "tax_amount": 144
+        }
+      ],
+      "original_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
+      "original_ext": "jpg",
+      "page_count": 1,
+      "derivative_error": null
+    },
+    {
+      "doc_id": "doc_2026-07-05_sample_002712",
+      "type": "receipt",
+      "origin": "paper",
+      "needs_review": false,
+      "review_reason": null,
+      "issuer": "架空カフェ",
+      "issued_at": "2026-07-05T12:00:00+09:00",
+      "total": 680,
+      "tax_breakdown": [
+        {
+          "rate": 0.1,
+          "taxable_amount": 618,
+          "tax_amount": 62
+        }
+      ],
+      "original_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000003",
+      "original_ext": "jpg",
+      "page_count": 1,
+      "derivative_error": null
+    },
+    {
+      "doc_id": "doc_2026-07-09_sample_002713",
+      "type": "receipt",
+      "origin": "paper",
+      "needs_review": false,
+      "review_reason": null,
+      "issuer": "サンプル電機 本店",
+      "issued_at": "2026-07-09T12:00:00+09:00",
+      "total": 12800,
+      "tax_breakdown": [
+        {
+          "rate": 0.1,
+          "taxable_amount": 11636,
+          "tax_amount": 1164
+        }
+      ],
+      "original_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000004",
+      "original_ext": "jpg",
+      "page_count": 1,
+      "derivative_error": null
+    },
+    {
+      "doc_id": "doc_2026-07-12_sample_002714",
+      "type": "receipt",
+      "origin": "paper",
+      "needs_review": false,
+      "review_reason": null,
+      "issuer": "サンプルストア 和多田店",
+      "issued_at": "2026-07-12T12:00:00+09:00",
+      "total": 2340,
+      "tax_breakdown": [
+        {
+          "rate": 0.1,
+          "taxable_amount": 2127,
+          "tax_amount": 213
+        }
+      ],
+      "original_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000005",
+      "original_ext": "jpg",
+      "page_count": 1,
+      "derivative_error": null
+    },
+    {
+      "doc_id": "doc_2026-07-14_sample_002715",
+      "type": "receipt",
+      "origin": "paper",
+      "needs_review": false,
+      "review_reason": null,
+      "issuer": "架空書店",
+      "issued_at": "2026-07-14T12:00:00+09:00",
+      "total": 3200,
+      "tax_breakdown": [
+        {
+          "rate": 0.1,
+          "taxable_amount": 2909,
+          "tax_amount": 291
+        }
+      ],
+      "original_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000006",
+      "original_ext": "jpg",
+      "page_count": 1,
+      "derivative_error": null
+    },
+    {
+      "doc_id": "doc_2026-07-16_sample_002719",
+      "type": "receipt",
+      "origin": "paper",
+      "needs_review": false,
+      "review_reason": null,
+      "issuer": "サンプルストア 和多田店",
+      "issued_at": "2026-07-16T12:00:00+09:00",
+      "total": 520,
+      "tax_breakdown": [
+        {
+          "rate": 0.1,
+          "taxable_amount": 473,
+          "tax_amount": 47
+        }
+      ],
+      "original_ref": "sha256:000000000000000000000000000000000000000000000000000000000000000a",
+      "original_ext": "jpg",
+      "page_count": 1,
+      "derivative_error": null
+    },
+    {
+      "doc_id": "doc_2026-07-18_sample_002716",
+      "type": "receipt",
+      "origin": "paper",
+      "needs_review": false,
+      "review_reason": null,
+      "issuer": "架空クラウド",
+      "issued_at": "2026-07-18T12:00:00+09:00",
+      "total": 2200,
+      "tax_breakdown": [
+        {
+          "rate": 0.1,
+          "taxable_amount": 2000,
+          "tax_amount": 200
+        }
+      ],
+      "original_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000007",
+      "original_ext": "jpg",
+      "page_count": 1,
+      "derivative_error": null
+    },
+    {
+      "doc_id": "doc_2026-07-21_sample_002717",
+      "type": "receipt",
+      "origin": "paper",
+      "needs_review": false,
+      "review_reason": null,
+      "issuer": "サンプルストア 和多田店",
+      "issued_at": "2026-07-21T12:00:00+09:00",
+      "total": 890,
+      "tax_breakdown": [
+        {
+          "rate": 0.1,
+          "taxable_amount": 809,
+          "tax_amount": 81
+        }
+      ],
+      "original_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000008",
+      "original_ext": "jpg",
+      "page_count": 1,
+      "derivative_error": null
+    },
+    {
+      "doc_id": "doc_2026-07-25_sample_002718",
+      "type": "receipt",
+      "origin": "paper",
+      "needs_review": false,
+      "review_reason": null,
+      "issuer": "架空鉄道",
+      "issued_at": "2026-07-25T12:00:00+09:00",
+      "total": 460,
+      "tax_breakdown": [
+        {
+          "rate": 0.1,
+          "taxable_amount": 418,
+          "tax_amount": 42
+        }
+      ],
+      "original_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000009",
+      "original_ext": "jpg",
+      "page_count": 1,
+      "derivative_error": null
+    },
+    {
+      "doc_id": "doc_2026-08-01_samplecard_002711",
+      "type": "card_statement",
+      "origin": "electronic",
+      "needs_review": false,
+      "review_reason": null,
+      "issuer": null,
+      "issued_at": null,
+      "total": null,
+      "tax_breakdown": null,
+      "original_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+      "original_ext": "jpg",
+      "page_count": 1,
+      "derivative_error": null
+    },
+    {
+      "doc_id": "doc_2026-08-02_sample_00271a",
+      "type": "receipt",
+      "origin": "paper",
+      "needs_review": false,
+      "review_reason": null,
+      "issuer": "架空カフェ",
+      "issued_at": "2026-08-02T12:00:00+09:00",
+      "total": 950,
+      "tax_breakdown": [
+        {
+          "rate": 0.1,
+          "taxable_amount": 864,
+          "tax_amount": 86
+        }
+      ],
+      "original_ref": "sha256:000000000000000000000000000000000000000000000000000000000000000b",
+      "original_ext": "jpg",
+      "page_count": 1,
+      "derivative_error": null
+    }
+  ]
+}

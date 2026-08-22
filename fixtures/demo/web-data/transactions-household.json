@@ -1,0 +1,281 @@
+{
+  "scope": "household",
+  "transactions": [
+    {
+      "id": "fdd05dd32953f922a3b132d295dc32ea",
+      "date": "2026-07-03",
+      "payee": "サンプルストア 和多田店",
+      "narration": "",
+      "account": "Expenses:Personal:Food:Groceries",
+      "amount": 1580,
+      "doc_id": "doc_2026-07-03_sample_002711",
+      "card_line": "doc_2026-08-01_samplecard_002711:L001",
+      "pending": false,
+      "postings": [
+        {
+          "account": "Expenses:Personal:Food:Groceries",
+          "amount": 1580
+        },
+        {
+          "account": "Liabilities:Personal:CreditCard:Sample",
+          "amount": -1580
+        }
+      ]
+    },
+    {
+      "id": "eaa37e91f0a2a5195ea0532ec31e4fc9",
+      "date": "2026-07-05",
+      "payee": "架空カフェ",
+      "narration": "",
+      "account": "Expenses:Personal:Food:Eatout",
+      "amount": 680,
+      "doc_id": "doc_2026-07-05_sample_002712",
+      "card_line": "doc_2026-08-01_samplecard_002711:L002",
+      "pending": false,
+      "postings": [
+        {
+          "account": "Expenses:Personal:Food:Eatout",
+          "amount": 680
+        },
+        {
+          "account": "Liabilities:Personal:CreditCard:Sample",
+          "amount": -680
+        }
+      ]
+    },
+    {
+      "id": "111a636864b90bec8b0658e051339b4d",
+      "date": "2026-07-09",
+      "payee": "サンプル電機 本店",
+      "narration": "",
+      "account": "Expenses:Business:Supplies",
+      "amount": 12800,
+      "doc_id": "doc_2026-07-09_sample_002713",
+      "card_line": "doc_2026-08-01_samplecard_002711:L003",
+      "pending": false,
+      "postings": [
+        {
+          "account": "Assets:Personal:BusinessInterest",
+          "amount": 12800
+        },
+        {
+          "account": "Equity:Owner:Contributions",
+          "amount": -12800
+        },
+        {
+          "account": "Expenses:Business:Supplies",
+          "amount": 12800
+        },
+        {
+          "account": "Liabilities:Personal:CreditCard:Sample",
+          "amount": -12800
+        }
+      ]
+    },
+    {
+      "id": "b9a60e7a073e4b025262f00ac0df7582",
+      "date": "2026-07-12",
+      "payee": "サンプルストア 和多田店",
+      "narration": "",
+      "account": "Expenses:Personal:Food:Groceries",
+      "amount": 2340,
+      "doc_id": "doc_2026-07-12_sample_002714",
+      "card_line": "doc_2026-08-01_samplecard_002711:L004",
+      "pending": false,
+      "postings": [
+        {
+          "account": "Expenses:Personal:Food:Groceries",
+          "amount": 2340
+        },
+        {
+          "account": "Liabilities:Personal:CreditCard:Sample",
+          "amount": -2340
+        }
+      ]
+    },
+    {
+      "id": "a34f4a6d62dd96bce3ad1b5e3edf0cbc",
+      "date": "2026-07-14",
+      "payee": "カクウショテン",
+      "narration": "",
+      "account": "Expenses:Personal:Education:Books",
+      "amount": 3200,
+      "doc_id": null,
+      "card_line": "doc_2026-08-01_samplecard_002711:L006",
+      "pending": false,
+      "postings": [
+        {
+          "account": "Expenses:Personal:Education:Books",
+          "amount": 3200
+        },
+        {
+          "account": "Liabilities:Personal:CreditCard:Sample",
+          "amount": -3200
+        }
+      ]
+    },
+    {
+      "id": "a21c8b195424f58a01baa67fd82b5ebf",
+      "date": "2026-07-14",
+      "payee": "架空書店",
+      "narration": "",
+      "account": "Expenses:Personal:Education:Books",
+      "amount": 3200,
+      "doc_id": "doc_2026-07-14_sample_002715",
+      "card_line": "doc_2026-08-01_samplecard_002711:L005",
+      "pending": false,
+      "postings": [
+        {
+          "account": "Expenses:Personal:Education:Books",
+          "amount": 3200
+        },
+        {
+          "account": "Liabilities:Personal:CreditCard:Sample",
+          "amount": -3200
+        }
+      ]
+    },
+    {
+      "id": "975fa702ede9b9c0f9daa6a37331cbce",
+      "date": "2026-07-16",
+      "payee": "サンプルストア 和多田店",
+      "narration": "",
+      "account": "Expenses:Personal:Food:Groceries",
+      "amount": 520,
+      "doc_id": "doc_2026-07-16_sample_002719",
+      "card_line": null,
+      "pending": false,
+      "postings": [
+        {
+          "account": "Assets:Personal:Cash",
+          "amount": -520
+        },
+        {
+          "account": "Expenses:Personal:Food:Groceries",
+          "amount": 520
+        }
+      ]
+    },
+    {
+      "id": "4ca740ccc9239ca5f67b08a5004ec207",
+      "date": "2026-07-18",
+      "payee": "架空クラウド",
+      "narration": "",
+      "account": "Expenses:Business:Communication",
+      "amount": 2200,
+      "doc_id": "doc_2026-07-18_sample_002716",
+      "card_line": "doc_2026-08-01_samplecard_002711:L007",
+      "pending": false,
+      "postings": [
+        {
+          "account": "Assets:Personal:BusinessInterest",
+          "amount": 2200
+        },
+        {
+          "account": "Equity:Owner:Contributions",
+          "amount": -2200
+        },
+        {
+          "account": "Expenses:Business:Communication",
+          "amount": 2200
+        },
+        {
+          "account": "Liabilities:Personal:CreditCard:Sample",
+          "amount": -2200
+        }
+      ]
+    },
+    {
+      "id": "0057b835080e7443c16eba0d726fa1fe",
+      "date": "2026-07-21",
+      "payee": "サンプルストア 和多田店",
+      "narration": "",
+      "account": "Expenses:Personal:Food:Groceries",
+      "amount": 890,
+      "doc_id": "doc_2026-07-21_sample_002717",
+      "card_line": "doc_2026-08-01_samplecard_002711:L008",
+      "pending": false,
+      "postings": [
+        {
+          "account": "Expenses:Personal:Food:Groceries",
+          "amount": 890
+        },
+        {
+          "account": "Liabilities:Personal:CreditCard:Sample",
+          "amount": -890
+        }
+      ]
+    },
+    {
+      "id": "4fedf26d6d2862c7879cc7f8614e54eb",
+      "date": "2026-07-25",
+      "payee": "架空鉄道",
+      "narration": "",
+      "account": "Expenses:Personal:Transport:Train",
+      "amount": 460,
+      "doc_id": "doc_2026-07-25_sample_002718",
+      "card_line": "doc_2026-08-01_samplecard_002711:L009",
+      "pending": false,
+      "postings": [
+        {
+          "account": "Expenses:Personal:Transport:Train",
+          "amount": 460
+        },
+        {
+          "account": "Liabilities:Personal:CreditCard:Sample",
+          "amount": -460
+        }
+      ]
+    },
+    {
+      "id": "47b963c7c595e12588dc381feb3513a6",
+      "date": "2026-07-28",
+      "payee": "サンプルデンキ",
+      "narration": "",
+      "account": "Expenses:Business:Supplies",
+      "amount": 4500,
+      "doc_id": null,
+      "card_line": "doc_2026-08-01_samplecard_002711:L010",
+      "pending": false,
+      "postings": [
+        {
+          "account": "Assets:Personal:BusinessInterest",
+          "amount": 4500
+        },
+        {
+          "account": "Equity:Owner:Contributions",
+          "amount": -4500
+        },
+        {
+          "account": "Expenses:Business:Supplies",
+          "amount": 4500
+        },
+        {
+          "account": "Liabilities:Personal:CreditCard:Sample",
+          "amount": -4500
+        }
+      ]
+    },
+    {
+      "id": "6c3f47193d38a648d31092ba7d7b6ac3",
+      "date": "2026-08-02",
+      "payee": "架空カフェ",
+      "narration": "",
+      "account": "Expenses:Personal:Food:Eatout",
+      "amount": 950,
+      "doc_id": "doc_2026-08-02_sample_00271a",
+      "card_line": null,
+      "pending": true,
+      "postings": [
+        {
+          "account": "Expenses:Personal:Food:Eatout",
+          "amount": 950
+        },
+        {
+          "account": "Liabilities:Personal:CreditCard:Sample",
+          "amount": -950
+        }
+      ]
+    }
+  ]
+}

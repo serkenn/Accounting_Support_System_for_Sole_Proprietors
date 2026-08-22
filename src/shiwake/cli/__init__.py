@@ -7,6 +7,8 @@ Phase 0.5 の時点では安全性の検査だけを提供する。
 from __future__ import annotations
 
 import argparse
+import contextlib
+import json
 import sys
 from pathlib import Path
 
@@ -31,6 +33,8 @@ from shiwake.safety import public_safe as ps
 from shiwake.safety.data_repo import check_no_app_code
 from shiwake.scopes import load_scopes
 from shiwake.tax import check_mapping_coverage, load_mapping
+from shiwake.web import build_web_data
+from shiwake.web.read_ledger import load_ledger_postings
 
 
 def _add_denylist_arg(p: argparse.ArgumentParser) -> None:
@@ -322,6 +326,57 @@ def cmd_build_ledger(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_build_web_data(args: argparse.Namespace) -> int:
+    """元帳 → Web 用の静的 JSON（第1部 §10）。
+
+    画面に出る数字はここで全部確定させる。ブラウザ側で集計し直さない。
+    """
+    import subprocess
+    from datetime import datetime
+
+    main = Path(args.main)
+    rules = Path(args.rules)
+    if not rules.is_file():
+        print(f"ERROR   {rules} がありません", file=sys.stderr)
+        return 1
+
+    try:
+        postings = load_ledger_postings(main)
+    except (BeanQueryMissingError, FileNotFoundError) as e:
+        print(f"ERROR   {e}", file=sys.stderr)
+        return 1
+
+    documents = []
+    docs_dir = Path(args.documents)
+    if docs_dir.is_dir():
+        for path in sorted(docs_dir.rglob("*.json")):
+            documents.append(json.loads(path.read_text(encoding="utf-8")))
+
+    # ★紙に刷ったときリポジトリの状態と紐づけるため（第3部 §10）
+    commit = ""
+    with contextlib.suppress(subprocess.SubprocessError, FileNotFoundError):
+        commit = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=10,
+        ).stdout.strip()
+
+    data = build_web_data(
+        postings=postings,
+        documents=documents,
+        scopes=load_scopes(rules),
+        generated_at=datetime.now().astimezone().isoformat(timespec="seconds"),
+        commit=commit,
+    )
+    written = data.write(Path(args.out))
+    print(f"build-web-data: {len(written)} ファイルを {args.out} に出力しました", file=sys.stderr)
+    for path in written:
+        print(f"  {path.name}", file=sys.stderr)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="shiwake", description="証憑から仕訳を組み立てるツールキット"
@@ -349,6 +404,13 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("build-ledger", help="documents と links から元帳を生成する")
     p.add_argument("month", help="対象の年月（YYYY-MM）")
     p.set_defaults(func=cmd_build_ledger)
+
+    p = sub.add_parser("build-web-data", help="元帳から Web 用の静的 JSON を作る（第1部 §10）")
+    p.add_argument("--main", default="ledger/main.beancount", help="元帳の入口")
+    p.add_argument("--documents", default="documents", help="documents ディレクトリ")
+    p.add_argument("--rules", default="rules/scopes.yaml", help="ビューの範囲")
+    p.add_argument("--out", default="web/public/data", help="出力先")
+    p.set_defaults(func=cmd_build_web_data)
 
     p = sub.add_parser("validate", help="document の検証（第1部 §9）")
     p.add_argument("paths", nargs="*", help="検証する JSON またはディレクトリ")
