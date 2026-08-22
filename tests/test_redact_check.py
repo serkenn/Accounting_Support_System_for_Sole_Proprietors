@@ -320,3 +320,41 @@ def test_lockfile_sizes_are_not_flagged():
         'sdist = { url = "https://example.com/a.tar.gz", size = 5005329 }\n'  # redact-check: ignore
     )
     assert Scanner(strict=True).scan_text(text, path="uv.lock") == []
+
+
+# ──────────────────────────────────────────────────────────
+# 名前ベースの層をどこで効かせるか（第13部 §6.1）
+# ──────────────────────────────────────────────────────────
+
+
+def test_denylist_belongs_to_the_public_side():
+    """★デノイリストは「公開側に名前を出さない」ための道具。
+
+    データリポジトリは、その名前が**正当に存在する場所**。
+    口座マスタには銀行名が書いてあるのが正しい。
+    そこで名前検査を掛けると、正しいデータが書けなくなる。
+
+    データ側で効かせるのはパターン層（口座番号・カード番号・マイナンバー）と
+    gitleaks。公開側へ出さないことは pre-push が担う。
+    """
+    account_master = '{"name": "架空銀行 架空支店", "account_no_last4": "1234"}'
+    dl = Denylist(["架空銀行"])
+
+    # 公開側では止まる
+    assert any(f.rule == "denylist" for f in Scanner(denylist=dl).scan_text(account_master))
+
+    # データ側では止まらない（名前層を使わない）
+    assert Scanner(denylist=None).scan_text(account_master, path="rules/accounts.yaml") == []
+
+
+def test_pattern_layer_still_works_without_the_denylist():
+    """★名前層を切っても、口座番号やカード番号の検査は効き続ける。"""
+    doc = f'{{"account_no": "{fake_bank_account()}"}}'
+    findings = Scanner(denylist=None).scan_text(doc, path="rules/accounts.yaml")
+    assert any(f.rule == "bank_account" and f.severity == "error" for f in findings)
+
+
+def test_last4_is_allowed_in_the_account_master():
+    """下4桁だけの保持は仕様上ゆるされている（第1部 §9.1）。"""
+    master = '{"name": "架空銀行", "account_no_last4": "1113", "card_last4": "5678"}'
+    assert Scanner(denylist=None, strict=True).scan_text(master, path="rules/accounts.yaml") == []

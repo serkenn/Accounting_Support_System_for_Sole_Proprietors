@@ -48,7 +48,17 @@ def _add_denylist_arg(p: argparse.ArgumentParser) -> None:
 
 
 def cmd_redact_check(args: argparse.Namespace) -> int:
-    denylist = Denylist.discover(args.denylist)
+    """機密文字列の検査（第1部 §11 S4 / 第13部 §6.1）。
+
+    ★名前ベースの層（デノイリスト）は「公開側に名前を出さない」ための道具。
+      データリポジトリは、その名前が**正当に存在する場所**なので、
+      そこで名前検査を掛けるのは道具の使い方が違う。
+      口座マスタに銀行名が書けなくなってしまう。
+
+      データ側で効かせるのはパターン層（口座番号・カード番号・マイナンバー）と
+      gitleaks。公開側へ出さないことは pre-push が担う。
+    """
+    denylist = None if args.no_denylist else Denylist.discover(args.denylist)
     scanner = Scanner(denylist=denylist, strict=args.strict, exclude=args.exclude)
 
     if args.message_file:
@@ -64,7 +74,12 @@ def cmd_redact_check(args: argparse.Namespace) -> int:
     for f in findings:
         print(f.format(), file=sys.stderr)
 
-    if not denylist:
+    if denylist is None:
+        print(
+            "NOTE    名前ベースの検査は無効にしています（--no-denylist）。",
+            file=sys.stderr,
+        )
+    elif not denylist:
         print(
             "NOTE    固有名詞リストが見つかりません。名前ベースの検査（第1層）は動いていません。\n"
             "        config/denylist.txt か ~/.config/shiwake/denylist.txt を用意してください。",
@@ -399,6 +414,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--strict", action="store_true", help="裸の数字列もエラーにする")
     p.add_argument("--exclude", action="append", default=[], help="除外するパス（複数指定可）")
     p.add_argument("--message-file", type=Path, default=None, help="コミットメッセージのファイル")
+    p.add_argument(
+        "--no-denylist",
+        action="store_true",
+        help="名前ベースの検査を行わない（名前が正当に存在するリポジトリで使う）",
+    )
     _add_denylist_arg(p)
     p.set_defaults(func=cmd_redact_check)
 
