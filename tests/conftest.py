@@ -53,3 +53,15 @@ def fake_email() -> str:
 def fake_phone() -> str:
     """架空の固定電話番号。"""
     return "0" + "955" + "-" + "12" + "-" + "3456"
+
+
+# ── ファイル形式のサンプル（実ファイルを置かずに合成する）──────
+
+
+JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32
+PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
+WEBP = b"RIFF" + b"\x00\x00\x00\x00" + b"WEBP" + b"\x00" * 32
+PDF = b"%PDF-1.7\n" + b"\x00" * 32
+HEIC = b"\x00\x00\x00\x18ftypheic" + b"\x00" * 32
+HEIF_MIF1 = b"\x00\x00\x00\x18ftypmif1" + b"\x00" * 32
+JPEG_WITH_EXIF = b"\xff\xd8\xff\xe1\x00\x10" + b"Exif\x00\x00" + b"\x00" * 32

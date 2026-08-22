@@ -10,12 +10,16 @@ import argparse
 import sys
 from pathlib import Path
 
+from shiwake import config as cfg
 from shiwake import validate as vd
+from shiwake.ingest import Manifest, ingest
+from shiwake.ingest.manifest import MANIFEST_NAME
 from shiwake.ledger import bean_check, load_postings
 from shiwake.ledger.check import BeanCheckMissingError
 from shiwake.ledger.query import BeanQueryMissingError
 from shiwake.safety import Denylist, Scanner
 from shiwake.safety import public_safe as ps
+from shiwake.safety.data_repo import check_no_app_code
 from shiwake.scopes import load_scopes
 from shiwake.tax import check_mapping_coverage, load_mapping
 
@@ -164,6 +168,69 @@ def cmd_scope_check(args: argparse.Namespace) -> int:
     return 1 if errors else 0
 
 
+def cmd_import(args: argparse.Namespace) -> int:
+    """inbox の中身を originals へ移す（第9部 §3.3）。
+
+    数十件をまとめて処理する前提なので、1件の失敗で止めない。
+    """
+    try:
+        conf = cfg.load()
+    except cfg.ConfigError as e:
+        print(f"ERROR   {e}", file=sys.stderr)
+        return 1
+
+    paths = conf.paths
+    if not paths.inbox.is_dir():
+        print(f"NOTE    {paths.inbox} がありません。取り込むものはありません。", file=sys.stderr)
+        return 0
+
+    def progress(index: int, total: int, name: str) -> None:
+        print(f"  {index}/{total} 処理中: {name}", file=sys.stderr)
+
+    result = ingest(
+        inbox=paths.inbox,
+        files=paths.files,
+        manifest=Manifest(paths.root / MANIFEST_NAME),
+        dry_run=args.dry_run,
+        on_progress=progress if not args.quiet else None,
+    )
+
+    print("", file=sys.stderr)
+    if args.dry_run:
+        print("（--dry-run のため、何も移動していません）", file=sys.stderr)
+    print(result.summary(), file=sys.stderr)
+
+    review = [i for i in result.succeeded if i.needs_review]
+    if review:
+        print("", file=sys.stderr)
+        print("  紙か電子かを確定できなかったもの:", file=sys.stderr)
+        for item in review:
+            print(f"    {item.source_name}  → {item.origin}（推定）", file=sys.stderr)
+        print(
+            "    inbox/paper/ か inbox/electronic/ に置くと確定します。",
+            file=sys.stderr,
+        )
+
+    for failure in result.failed:
+        print(f"\nFAILED  {failure.source_name}: {failure.reason}", file=sys.stderr)
+
+    return 1 if result.failed else 0
+
+
+def cmd_check_data_repo(args: argparse.Namespace) -> int:
+    """データリポジトリにアプリのコードが無いことを確かめる（第13部 §0）。
+
+    分離の前提は「非公開側にコードが1行も無い」こと。
+    無ければ誤って公開側へ push する経路が存在しない。
+    作業ディレクトリを間違えるだけで崩れるので、機械で止める。
+    """
+    problems = check_no_app_code(Path(args.root), allow=args.allow)
+    for p in problems:
+        print(p.format(), file=sys.stderr)
+    print(f"\ncheck-data-repo: {len(problems)} 件", file=sys.stderr)
+    return 1 if problems else 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="shiwake", description="証憑から仕訳を組み立てるツールキット"
@@ -178,6 +245,11 @@ def build_parser() -> argparse.ArgumentParser:
     _add_denylist_arg(p)
     p.set_defaults(func=cmd_redact_check)
 
+    p = sub.add_parser("import", help="inbox の中身を原本として取り込む（第9部 §3）")
+    p.add_argument("--dry-run", action="store_true", help="何が起きるかだけを見る")
+    p.add_argument("--quiet", action="store_true", help="進捗を出さない")
+    p.set_defaults(func=cmd_import)
+
     p = sub.add_parser("validate", help="document の検証（第1部 §9）")
     p.add_argument("paths", nargs="*", help="検証する JSON またはディレクトリ")
     p.set_defaults(func=cmd_validate)
@@ -191,6 +263,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--rules", default="rules/scopes.yaml", help="範囲と規則の定義")
     p.add_argument("--mapping", default="rules/aoiro_mapping.yaml", help="決算書へのマッピング")
     p.set_defaults(func=cmd_scope_check)
+
+    p = sub.add_parser(
+        "check-data-repo", help="データ側にアプリのコードが無いかの検査（第13部 §0）"
+    )
+    p.add_argument("--root", default=".", help="データリポジトリのルート")
+    p.add_argument("--allow", action="append", default=[], help="例外にするパス")
+    p.set_defaults(func=cmd_check_data_repo)
 
     p = sub.add_parser("check-public-safe", help="公開リポジトリの安全性検査（第13部 §6.2）")
     p.add_argument("--root", default=".", help="リポジトリのルート")
