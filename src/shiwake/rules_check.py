@@ -90,7 +90,33 @@ def check_accounts(path: Path) -> list[RuleIssue]:
 
             if kind == "cards":
                 issues.extend(_check_card_schedule(entry, target))
+            elif kind == "debit_cards":
+                issues.extend(_check_debit_card(entry, target))
 
+    return issues
+
+
+def _check_debit_card(entry: dict, target: str) -> list[RuleIssue]:
+    """デビットは締め日を持たないが、**引落元の口座**が正しいことは要る。
+
+    ★ここが違うと、そのカードの支払いが全部まちがった口座から出る。
+      しかも元帳の貸借は合うので、検算では気づけない。
+    """
+    issues: list[RuleIssue] = []
+    if not entry.get("account"):
+        issues.append(
+            RuleIssue("error", target, "account が未設定です。支払いの貸方が決まりません")
+        )
+    elif not entry.get("verified_on"):
+        issues.append(
+            RuleIssue(
+                "warning",
+                target,
+                "引落元の口座を確認していません。"
+                "ここが違うと支払いが全部まちがった口座から出ます。"
+                "確認したら verified_on に日付を入れてください",
+            )
+        )
     return issues
 
 

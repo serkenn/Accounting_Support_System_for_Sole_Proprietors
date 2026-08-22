@@ -146,6 +146,7 @@ def test_debit_card_does_not_need_a_closing_day(tmp_path):
             card_last4: "1234"
             account: "Assets:Personal:Bank:B"
             settlement: immediate
+            verified_on: 2026-08-23
     """
     assert check_accounts(write(tmp_path, body)) == []
 
@@ -172,3 +173,44 @@ def test_debit_card_is_still_checked_for_namespace_and_last4(tmp_path):
     issues = check_accounts(write(tmp_path, body))
     assert any("下4桁のみ" in i.message for i in issues)
     assert any("*:Personal:*" in i.message for i in issues)
+
+
+def test_debit_card_account_must_be_verified(tmp_path):
+    """★引落元が違うと、そのカードの支払いが全部まちがった口座から出る。
+
+    しかも元帳の貸借は合うので、検算では気づけない。
+    """
+    body = """
+        debit_cards:
+          - id: debit_a
+            namespace: mixed
+            card_last4: "1234"
+            account: "Assets:Personal:Bank:B"
+            verified_on: null
+    """
+    issues = check_accounts(write(tmp_path, body))
+    assert any("まちがった口座" in i.message for i in issues)
+
+
+def test_verified_debit_card_passes(tmp_path):
+    body = """
+        debit_cards:
+          - id: debit_a
+            namespace: mixed
+            card_last4: "1234"
+            account: "Assets:Personal:Bank:B"
+            verified_on: 2026-08-23
+    """
+    assert check_accounts(write(tmp_path, body)) == []
+
+
+def test_debit_card_without_account_is_an_error(tmp_path):
+    body = """
+        debit_cards:
+          - id: debit_a
+            namespace: mixed
+            card_last4: "1234"
+            account: null
+    """
+    issues = check_accounts(write(tmp_path, body))
+    assert any(i.severity == "error" for i in issues)
