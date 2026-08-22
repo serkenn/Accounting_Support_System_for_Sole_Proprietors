@@ -1,0 +1,24 @@
+# SYNTHETIC — 合成データです。実在の店舗とは一切関係ありません。
+#
+# ★カード明細と領収書で表記が揃わない問題を、この辞書で解きます。
+#   突合できなかったものを人が結び付けたら、その対応をここに足します。
+version: 1
+merchants:
+  - id: sample_store
+    canonical: サンプルストア
+    aliases: ["サンプルストア ワタダ", "サンプルストア 和多田店", "ｻﾝﾌﾟﾙｽﾄｱ"]
+  - id: sample_denki
+    canonical: サンプル電機
+    aliases: ["サンプルデンキ", "サンプル電機 本店"]
+  - id: sample_cafe
+    canonical: 架空カフェ
+    aliases: ["カクウカフェ"]
+  - id: sample_books
+    canonical: 架空書店
+    aliases: ["カクウショテン"]
+  - id: sample_rail
+    canonical: 架空鉄道
+    aliases: ["カクウテツドウ"]
+  - id: sample_saas
+    canonical: 架空クラウド
+    aliases: ["KAKUU CLOUD"]

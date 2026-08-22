@@ -1,0 +1,32 @@
+# SYNTHETIC — 合成データです。
+#
+# ★当てはまらないものを「その他」に落とす既定値を持ちません。
+#   落とすと、分類できていないことに誰も気づかなくなります。
+version: 1
+rules:
+  - id: groceries
+    match: { merchant_id: sample_store }
+    account: "Expenses:Personal:Food:Groceries"
+
+  - id: eatout
+    match: { merchant_id: sample_cafe }
+    account: "Expenses:Personal:Food:Eatout"
+
+  - id: books
+    match: { merchant_id: sample_books }
+    account: "Expenses:Personal:Education:Books"
+
+  - id: train
+    match: { merchant_id: sample_rail }
+    account: "Expenses:Personal:Transport:Train"
+
+  # ★事業の支出。混在カードで払うので、資本の科目を経由した仕訳になる
+  - id: business_supplies
+    match: { merchant_id: sample_denki }
+    account: "Expenses:Business:Supplies"
+    business: true
+
+  - id: business_saas
+    match: { merchant_id: sample_saas }
+    account: "Expenses:Business:Communication"
+    business: true

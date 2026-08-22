@@ -1,0 +1,24 @@
+;; SYNTHETIC — 合成データのデモ用元帳です。
+option "title" "demo"
+option "operating_currency" "JPY"
+
+2026-07-01 open Assets:Personal:Bank:Sample             JPY
+2026-07-01 open Assets:Personal:Cash                    JPY
+2026-07-01 open Assets:Personal:BusinessInterest        JPY
+2026-07-01 open Liabilities:Personal:CreditCard:Sample  JPY
+2026-07-01 open Expenses:Personal:Food:Groceries        JPY
+2026-07-01 open Expenses:Personal:Food:Eatout           JPY
+2026-07-01 open Expenses:Personal:Education:Books       JPY
+2026-07-01 open Expenses:Personal:Transport:Train       JPY
+2026-07-01 open Expenses:Business:Supplies              JPY
+2026-07-01 open Expenses:Business:Communication         JPY
+2026-07-01 open Equity:Owner:Contributions              JPY
+2026-07-01 open Equity:Owner:Drawings                   JPY
+2026-07-01 open Equity:Opening-Balances                 JPY
+
+2026-07-01 * "期首残高"
+  Assets:Personal:Bank:Sample   200000 JPY
+  Assets:Personal:Cash            5000 JPY
+  Equity:Opening-Balances
+
+include "ledger/2026-07.beancount"

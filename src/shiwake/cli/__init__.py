@@ -14,8 +14,17 @@ from shiwake import config as cfg
 from shiwake import validate as vd
 from shiwake.ingest import Manifest, ingest
 from shiwake.ingest.manifest import MANIFEST_NAME
-from shiwake.ledger import bean_check, load_postings
+from shiwake.ledger import (
+    bean_check,
+    find_candidates,
+    load_categories,
+    load_links,
+    load_merchants,
+    load_postings,
+    save_links,
+)
 from shiwake.ledger.check import BeanCheckMissingError
+from shiwake.ledger.documents import load_month
 from shiwake.ledger.query import BeanQueryMissingError
 from shiwake.safety import Denylist, Scanner
 from shiwake.safety import public_safe as ps
@@ -231,6 +240,88 @@ def cmd_check_data_repo(args: argparse.Namespace) -> int:
     return 1 if problems else 0
 
 
+def cmd_reconcile(args: argparse.Namespace) -> int:
+    """領収書とカード明細行の突合（第1部 §6）。
+
+    ★候補を出すだけ。**自動確定しない。**
+    """
+    month = args.month
+    root = Path(".")
+    merchants = load_merchants(root / "rules" / "merchants.yaml")
+    receipts, card_lines = load_month(root / "documents", month)
+    links_path = root / "links" / f"{month}.json"
+    links = load_links(links_path)
+
+    found = find_candidates(receipts, card_lines, merchants, links.linked_keys())
+
+    print(f"突合  {month}", file=sys.stderr)
+    print(f"  確定できる候補   {len(found.confident)} 件", file=sys.stderr)
+    print(f"  要確認（複数候補）{len(found.ambiguous)} 件", file=sys.stderr)
+    print(f"  領収書のみ       {len(found.unmatched_receipts)} 件", file=sys.stderr)
+    print(f"  明細のみ         {len(found.unmatched_card_lines)} 件", file=sys.stderr)
+
+    for doc_id, cands in found.ambiguous.items():
+        print(f"\n  {doc_id} の候補:", file=sys.stderr)
+        for c in cands:
+            print(
+                f"    {c.card_line_key}  一致度 {c.name_score:.2f} 日付差 {c.date_diff}日",
+                file=sys.stderr,
+            )
+        print("    → どれか選んでください。自動では決めません。", file=sys.stderr)
+
+    if args.apply and found.confident:
+        from shiwake.ledger import Links
+
+        merged = Links(month=links.month or month, links=dict(links.links))
+        for c in found.confident:
+            merged.links.setdefault(c.receipt_doc_id, c.card_line_key)
+        save_links(links_path, merged)
+        print(f"\n  {len(found.confident)} 件を {links_path} に確定しました", file=sys.stderr)
+    elif found.confident:
+        print("\n  --apply を付けると確定します（既定は確定しません）", file=sys.stderr)
+
+    return 0
+
+
+def cmd_build_ledger(args: argparse.Namespace) -> int:
+    """documents + links → Beancount（第1部 §6）。
+
+    分類できない取引があれば止まる。「その他」に落として先に進まない。
+    """
+    from shiwake.ledger import build_month
+
+    month = args.month
+    root = Path(".")
+    merchants = load_merchants(root / "rules" / "merchants.yaml")
+    categorizer = load_categories(root / "rules" / "categories.yaml", merchants)
+    receipts, card_lines = load_month(root / "documents", month)
+    links = load_links(root / "links" / f"{month}.json")
+
+    result = build_month(receipts, card_lines, links, categorizer)
+
+    for issue in result.issues:
+        print(issue.format(), file=sys.stderr)
+
+    if result.errors:
+        print(
+            f"\nbuild-ledger: error {len(result.errors)} 件。元帳を出力しません。",
+            file=sys.stderr,
+        )
+        return 1
+
+    out = root / "ledger" / "generated" / f"{month}.beancount"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    header = (
+        ";; このファイルは生成物です。手で編集しません。\n"
+        ";; 直すときは documents/ か rules/ を直して再生成します。"
+    )
+    out.write_text(result.render(header), encoding="utf-8")
+    print(
+        f"build-ledger: {len(result.transactions)} 件の仕訳を {out} に出力しました", file=sys.stderr
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="shiwake", description="証憑から仕訳を組み立てるツールキット"
@@ -249,6 +340,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--dry-run", action="store_true", help="何が起きるかだけを見る")
     p.add_argument("--quiet", action="store_true", help="進捗を出さない")
     p.set_defaults(func=cmd_import)
+
+    p = sub.add_parser("reconcile", help="領収書とカード明細行の突合（第1部 §6）")
+    p.add_argument("month", help="対象の年月（YYYY-MM）")
+    p.add_argument("--apply", action="store_true", help="候補が1つだけのものを確定する")
+    p.set_defaults(func=cmd_reconcile)
+
+    p = sub.add_parser("build-ledger", help="documents と links から元帳を生成する")
+    p.add_argument("month", help="対象の年月（YYYY-MM）")
+    p.set_defaults(func=cmd_build_ledger)
 
     p = sub.add_parser("validate", help="document の検証（第1部 §9）")
     p.add_argument("paths", nargs="*", help="検証する JSON またはディレクトリ")

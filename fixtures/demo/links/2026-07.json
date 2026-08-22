@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "month": "2026-07",
+  "_note": "SYNTHETIC — 合成データです。実在の取引ではありません。",
+  "links": {
+    "doc_2026-07-03_sample_002711": "doc_2026-08-01_samplecard_002711:L001",
+    "doc_2026-07-05_sample_002712": "doc_2026-08-01_samplecard_002711:L002",
+    "doc_2026-07-09_sample_002713": "doc_2026-08-01_samplecard_002711:L003",
+    "doc_2026-07-12_sample_002714": "doc_2026-08-01_samplecard_002711:L004",
+    "doc_2026-07-14_sample_002715": "doc_2026-08-01_samplecard_002711:L005",
+    "doc_2026-07-18_sample_002716": "doc_2026-08-01_samplecard_002711:L007",
+    "doc_2026-07-21_sample_002717": "doc_2026-08-01_samplecard_002711:L008",
+    "doc_2026-07-25_sample_002718": "doc_2026-08-01_samplecard_002711:L009"
+  }
+}

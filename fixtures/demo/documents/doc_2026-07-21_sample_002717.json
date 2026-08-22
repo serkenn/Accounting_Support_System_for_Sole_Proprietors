@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "doc_id": "doc_2026-07-21_sample_002717",
+  "type": "receipt",
+  "source": {
+    "original_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000008",
+    "original_ext": "jpg",
+    "ingested_at": "2026-08-01T10:00:00+09:00",
+    "extractor": {
+      "skill": "parse-receipt",
+      "skill_version": "1.0.0",
+      "model": "synthetic"
+    }
+  },
+  "origin": "paper",
+  "paper_retained": true,
+  "needs_review": false,
+  "review_reason": null,
+  "issuer": {
+    "name": "サンプルストア 和多田店"
+  },
+  "issued_at": "2026-07-21T12:00:00+09:00",
+  "currency": "JPY",
+  "total": 890,
+  "tax_breakdown": [
+    {
+      "rate": 0.1,
+      "taxable_amount": 809,
+      "tax_amount": 81
+    }
+  ],
+  "payment": {
+    "method": "credit_card"
+  },
+  "lines": [
+    {
+      "description": "明細",
+      "amount": 890
+    }
+  ],
+  "notes": "SYNTHETIC — 合成データ。実在の取引・店舗とは関係ありません。"
+}

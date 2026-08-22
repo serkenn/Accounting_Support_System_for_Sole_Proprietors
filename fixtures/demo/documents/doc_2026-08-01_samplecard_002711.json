@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "doc_id": "doc_2026-08-01_samplecard_002711",
+  "type": "card_statement",
+  "source": {
+    "original_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+    "original_ext": "jpg",
+    "ingested_at": "2026-08-01T10:00:00+09:00",
+    "extractor": {
+      "skill": "parse-receipt",
+      "skill_version": "1.0.0",
+      "model": "synthetic"
+    }
+  },
+  "origin": "electronic",
+  "needs_review": false,
+  "review_reason": null,
+  "account": "Liabilities:Personal:CreditCard:Sample",
+  "card_last4": "1234",
+  "period": {
+    "from": "2026-07-01",
+    "to": "2026-07-31"
+  },
+  "statement_total": 31850,
+  "debit_date": "2026-08-27",
+  "transactions": [
+    {
+      "line_id": "L001",
+      "date": "2026-07-03",
+      "raw_description": "サンプルストア ワタダ",
+      "amount": 1580
+    },
+    {
+      "line_id": "L002",
+      "date": "2026-07-05",
+      "raw_description": "カクウカフェ",
+      "amount": 680
+    },
+    {
+      "line_id": "L003",
+      "date": "2026-07-09",
+      "raw_description": "サンプルデンキ",
+      "amount": 12800
+    },
+    {
+      "line_id": "L004",
+      "date": "2026-07-12",
+      "raw_description": "サンプルストア ワタダ",
+      "amount": 2340
+    },
+    {
+      "line_id": "L005",
+      "date": "2026-07-14",
+      "raw_description": "カクウショテン",
+      "amount": 3200
+    },
+    {
+      "line_id": "L006",
+      "date": "2026-07-14",
+      "raw_description": "カクウショテン",
+      "amount": 3200
+    },
+    {
+      "line_id": "L007",
+      "date": "2026-07-18",
+      "raw_description": "KAKUU CLOUD",
+      "amount": 2200
+    },
+    {
+      "line_id": "L008",
+      "date": "2026-07-21",
+      "raw_description": "サンプルストア ワタダ",
+      "amount": 890
+    },
+    {
+      "line_id": "L009",
+      "date": "2026-07-25",
+      "raw_description": "カクウテツドウ",
+      "amount": 460
+    },
+    {
+      "line_id": "L010",
+      "date": "2026-07-28",
+      "raw_description": "サンプルデンキ",
+      "amount": 4500
+    }
+  ],
+  "notes": "SYNTHETIC — 合成データ。実在の取引・店舗とは関係ありません。"
+}
