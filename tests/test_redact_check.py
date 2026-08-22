@@ -356,5 +356,5 @@ def test_pattern_layer_still_works_without_the_denylist():
 
 def test_last4_is_allowed_in_the_account_master():
     """下4桁だけの保持は仕様上ゆるされている（第1部 §9.1）。"""
-    master = '{"name": "架空銀行", "account_no_last4": "1113", "card_last4": "5678"}'
+    master = '{"name": "架空銀行", "account_no_last4": "9876", "card_last4": "5432"}'
     assert Scanner(denylist=None, strict=True).scan_text(master, path="rules/accounts.yaml") == []
