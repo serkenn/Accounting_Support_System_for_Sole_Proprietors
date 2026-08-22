@@ -81,23 +81,109 @@ def _category_of(account: str) -> tuple[str, str]:
     return namespace, name
 
 
-def build_monthly_summary(postings: list[LedgerPosting], scope: str, scopes: Scopes) -> list[dict]:
-    """月次の収入・支出・差引（第1部 §10-1）。"""
-    buckets: dict[str, dict[str, int]] = defaultdict(lambda: {"income": 0, "expense": 0})
+def _by_transaction(postings: list[LedgerPosting]) -> dict[str, list[LedgerPosting]]:
+    groups: dict[str, list[LedgerPosting]] = defaultdict(list)
     for p in postings:
-        if not scopes.in_scope(scope, p.account):
-            continue
-        month = _month_of(p.date)
-        if _is_expense(p.account):
-            buckets[month]["expense"] += p.amount
-        elif _is_income(p.account):
-            buckets[month]["income"] += -p.amount  # 収入は貸方（負）で入る
+        groups[p.txn_id].append(p)
+    return groups
+
+
+@dataclass(frozen=True)
+class CashFlow:
+    """1取引が家計の財布に与えた影響。"""
+
+    month: str
+    inflow: int
+    outflow: int
+    #: 出ていった額を、何に使ったかで割り振ったもの
+    by_category: dict[tuple[str, str], int]
+
+
+def _household_cash_flow(group: list[LedgerPosting], scopes: Scopes) -> CashFlow | None:
+    """家計の財布の増減から、その取引の出入りを出す。
+
+    ★「いくら出たか」を決めるのは貸方（どの財布から出たか）。
+      借方（何に使ったか）で数えると、事業用口座を分けた瞬間に
+      家計の支出が過大になる（事業の口座で払った分まで乗る）。
+
+    カテゴリの内訳は借方から取る。「何に使ったか」はそちらにあるため。
+    出た額を、費用の posting に按分して割り当てる。
+    """
+    # ★期首残高や元入金は「入ってきたお金」ではない。
+    #   最初から持っていたものを宣言しているだけなので、出入りから外す。
+    #   ここを数えると、初月の収入が期首残高の分だけ跳ね上がる。
+    if any(p.account.startswith("Equity:Opening-Balances") for p in group):
+        return None
+
+    delta = sum(p.amount for p in group if scopes.is_wallet(p.account))
+    if delta == 0:
+        # 財布どうしの振替（カードの引落など）。出入りではない
+        return None
+
+    month = _month_of(group[0].date)
+    if delta > 0:
+        return CashFlow(month=month, inflow=delta, outflow=0, by_category={})
+
+    outflow = -delta
+    expenses = [p for p in group if _is_expense(p.account) and p.amount > 0]
+    total = sum(p.amount for p in expenses)
+
+    by_category: dict[tuple[str, str], int] = defaultdict(int)
+    if total > 0:
+        assigned = 0
+        for i, p in enumerate(expenses):
+            # 端数は最後の1件に寄せる。合計が outflow と必ず一致するように
+            share = outflow - assigned if i == len(expenses) - 1 else outflow * p.amount // total
+            by_category[_category_of(p.account)] += share
+            assigned += share
+    else:
+        # 費用の posting が無い出金（貸付・振替など）
+        by_category[("other", "その他")] += outflow
+
+    return CashFlow(month=month, inflow=0, outflow=outflow, by_category=dict(by_category))
+
+
+def build_monthly_summary(postings: list[LedgerPosting], scope: str, scopes: Scopes) -> list[dict]:
+    """月次の収入・支出・差引（第1部 §10-1）。
+
+    家計は**財布の出入り**（第5部 §9.1「いくら入っていくら出たか」）、
+    事業は**発生ベース**（決算書と同じ範囲）で数える。数え方が違う。
+    """
+    buckets: dict[str, dict[str, int]] = defaultdict(
+        lambda: {"income": 0, "expense": 0, "business_share": 0}
+    )
+
+    if scope == "household" and scopes.has_wallets:
+        for group in _by_transaction(postings).values():
+            flow = _household_cash_flow(group, scopes)
+            if flow is None:
+                continue
+            bucket = buckets[flow.month]
+            bucket["income"] += flow.inflow
+            bucket["expense"] += flow.outflow
+            # ★このうち事業のために出た分。同額が事業への持分に変わっている
+            bucket["business_share"] += sum(
+                amount
+                for (namespace, _), amount in flow.by_category.items()
+                if namespace == "business"
+            )
+    else:
+        for p in postings:
+            if not scopes.in_scope(scope, p.account):
+                continue
+            month = _month_of(p.date)
+            if _is_expense(p.account):
+                buckets[month]["expense"] += p.amount
+            elif _is_income(p.account):
+                buckets[month]["income"] += -p.amount
+
     return [
         {
             "month": month,
             "income": v["income"],
             "expense": v["expense"],
             "net": v["income"] - v["expense"],
+            "business_share": v["business_share"],
         }
         for month, v in sorted(buckets.items())
     ]
@@ -108,16 +194,25 @@ def build_categories(
 ) -> list[dict]:
     """カテゴリ別の支出（第3部 §8.1）。
 
-    第3部 §5 — 4色までに収め、5つ目以降は「その他」にまとめる。
-    ただしまとめるのは画面の話なので、ここでは全部返して額の降順に並べる。
+    家計は財布から出た額を、何に使ったかで割り振る。
+    事業は発生ベースでそのまま集計する。
     """
     totals: dict[tuple[str, str], int] = defaultdict(int)
-    for p in postings:
-        if not _is_expense(p.account) or not scopes.in_scope(scope, p.account):
-            continue
-        if _month_of(p.date) != month:
-            continue
-        totals[_category_of(p.account)] += p.amount
+
+    if scope == "household" and scopes.has_wallets:
+        for group in _by_transaction(postings).values():
+            flow = _household_cash_flow(group, scopes)
+            if flow is None or flow.month != month:
+                continue
+            for key, amount in flow.by_category.items():
+                totals[key] += amount
+    else:
+        for p in postings:
+            if not _is_expense(p.account) or not scopes.in_scope(scope, p.account):
+                continue
+            if _month_of(p.date) != month:
+                continue
+            totals[_category_of(p.account)] += p.amount
 
     grand = sum(totals.values())
     return [

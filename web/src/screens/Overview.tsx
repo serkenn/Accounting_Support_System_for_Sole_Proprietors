@@ -18,7 +18,7 @@ import {
   loadCategories,
   loadSummary,
 } from "../lib/data";
-import { formatMonth } from "../lib/format";
+import { formatExpense, formatMonth } from "../lib/format";
 import { useAsync, useMeta, useScope } from "../lib/state";
 
 export function Overview() {
@@ -55,7 +55,7 @@ export function Overview() {
               </Td>
             </tr>
             <tr>
-              <Td>支出</Td>
+              <Td>家計から出た額</Td>
               <Td numeric>
                 <FigureCell value={-current.expense} />
               </Td>
@@ -70,6 +70,24 @@ export function Overview() {
             </TotalRow>
           </tfoot>
         </Table>
+      )}
+
+      {/* ★この数字は2つの意味を持つ。説明しないと誤解される。
+          家計の財布からは出ているが、同額が事業への持分に変わっているので
+          家計の資産は減っていない */}
+      {current && current.business_share > 0 && (
+        <p className="mt-2 text-std-16N-170 text-solid-gray-700">
+          このうち{" "}
+          <span className="font-num tabular-nums">
+            {formatExpense(current.business_share)}
+          </span>{" "}
+          円は事業のための支出です。同額が事業への持分に変わっているため、家計の資産は減っていません。
+          実質の目減りは{" "}
+          <span className="font-num tabular-nums">
+            {formatExpense(current.expense - current.business_share)}
+          </span>{" "}
+          円です。
+        </p>
       )}
 
       <Section title="カテゴリ別支出">

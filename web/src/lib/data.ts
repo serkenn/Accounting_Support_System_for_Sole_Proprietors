@@ -16,7 +16,14 @@ export type Meta = {
   _note?: string;
 };
 
-export type MonthlySummary = { month: string; income: number; expense: number; net: number };
+export type MonthlySummary = {
+  month: string;
+  income: number;
+  expense: number;
+  net: number;
+  /** 支出のうち事業のために出た分。同額が事業への持分に変わっている */
+  business_share: number;
+};
 export type Category = { namespace: string; category: string; amount: number; ratio: number };
 export type PostingRow = { account: string; amount: number };
 export type Transaction = {

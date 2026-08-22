@@ -5,13 +5,15 @@
       "month": "2026-07",
       "income": 0,
       "expense": 32370,
-      "net": -32370
+      "net": -32370,
+      "business_share": 19500
     },
     {
       "month": "2026-08",
       "income": 0,
       "expense": 950,
-      "net": -950
+      "net": -950,
+      "business_share": 0
     }
   ],
   "_note": "SYNTHETIC — 合成データから生成しました。実在の取引ではありません。"

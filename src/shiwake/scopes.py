@@ -106,6 +106,10 @@ class Scopes:
             for g in data.get("guards", [])
         ]
         self._aggregates: dict[str, dict] = data.get("aggregates", {})
+        wallets = data.get("household_wallets", {})
+        self._wallet_include: list[str] = list(wallets.get("include", []))
+        self._wallet_exclude: list[str] = list(wallets.get("exclude", []))
+
         crossing = data.get("crossing", {})
         self.namespaces: list[str] = list(crossing.get("namespaces", []))
         self.bridge_equity: str = crossing.get("bridge_equity", "")
@@ -118,6 +122,26 @@ class Scopes:
 
     def accounts_in_scope(self, scope: str, accounts: Iterable[str]) -> list[str]:
         return [a for a in accounts if self.in_scope(scope, a)]
+
+    # ── 家計の財布 ──────────────────────────────────
+
+    def is_wallet(self, account: str) -> bool:
+        """家計の財布か。
+
+        ★家計の「いくら出たか」を決めるのは、何に使ったか（借方）ではなく
+          **どの財布から出たか（貸方）**。借方で数えると、事業用口座を
+          分けた瞬間に家計の支出が過大になる。
+
+        持分（BusinessInterest）と前払税金は財布ではない。
+        使えるお金ではないので、増減しても家計の出入りにはならない。
+        """
+        if any(matches(p, account) for p in self._wallet_exclude):
+            return False
+        return any(matches(p, account) for p in self._wallet_include)
+
+    @property
+    def has_wallets(self) -> bool:
+        return bool(self._wallet_include)
 
     # ── 集計への混入 ────────────────────────────────
 
