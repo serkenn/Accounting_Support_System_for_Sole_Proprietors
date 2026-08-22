@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shiwake.invalid/schemas/payslip.schema.json",
+  "title": "給与明細",
+  "$comment": "給与所得は事業所得ではない。この document から事業の P/L を作らない（第5部 §1）",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/envelope" }],
+  "type": "object",
+  "properties": {
+    "type": { "const": "payslip" },
+    "employer_id": {
+      "description": "第5部 §10 で必須化。employers/<id>.yaml に対応する",
+      "type": "string",
+      "pattern": "^emp_[a-z0-9_]+$"
+    },
+    "income_category": { "type": "string", "const": "employment" },
+    "pay_date": { "$ref": "common.schema.json#/$defs/date" },
+    "period": { "$ref": "common.schema.json#/$defs/period" },
+    "gross": { "$ref": "common.schema.json#/$defs/amount" },
+    "earnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "amount": { "$ref": "common.schema.json#/$defs/amount" }
+        },
+        "required": ["name", "amount"],
+        "additionalProperties": false
+      }
+    },
+    "deductions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "amount": { "$ref": "common.schema.json#/$defs/amount" },
+          "deduction_type": {
+            "description": "所得控除として拾うための印（第5部 §2.2）",
+            "type": ["string", "null"],
+            "enum": [
+              "social_insurance", "life_insurance", "earthquake_insurance",
+              "small_business_mutual_aid", "medical", "donation",
+              "income_tax", "resident_tax", "other", null
+            ]
+          }
+        },
+        "required": ["name", "amount"],
+        "additionalProperties": false
+      }
+    },
+    "net": { "$ref": "common.schema.json#/$defs/amount" },
+    "commute_allowance": { "$ref": "common.schema.json#/$defs/amount" },
+    "taxable_commute_allowance": { "$ref": "common.schema.json#/$defs/amount" },
+    "deposit_account": { "type": ["string", "null"] },
+    "attendance": {
+      "type": "object",
+      "properties": {
+        "work_days": { "type": ["number", "null"] },
+        "overtime_hours": { "type": ["number", "null"] }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "employer_id", "income_category", "pay_date", "period",
+    "gross", "earnings", "deductions", "net"
+  ],
+  "unevaluatedProperties": false
+}

@@ -10,6 +10,9 @@ import argparse
 import sys
 from pathlib import Path
 
+from shiwake import validate as vd
+from shiwake.ledger import bean_check
+from shiwake.ledger.check import BeanCheckMissingError
 from shiwake.safety import Denylist, Scanner
 from shiwake.safety import public_safe as ps
 
@@ -86,6 +89,38 @@ def cmd_check_public_safe(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_validate(args: argparse.Namespace) -> int:
+    paths = [Path(p) for p in args.paths] or [Path("documents")]
+    missing = [p for p in paths if not p.exists()]
+    for p in missing:
+        print(f"NOTE    {p} がありません（まだ取り込んでいない状態です）", file=sys.stderr)
+    issues = vd.validate_paths([p for p in paths if p.exists()])
+
+    for i in issues:
+        print(i.format(), file=sys.stderr)
+
+    errors = [i for i in issues if i.severity == "error"]
+    warnings = [i for i in issues if i.severity == "warning"]
+    print(f"\nvalidate: error {len(errors)} 件 / warning {len(warnings)} 件", file=sys.stderr)
+    return 1 if errors else 0
+
+
+def cmd_bean_check(args: argparse.Namespace) -> int:
+    try:
+        result = bean_check(Path(args.main))
+    except BeanCheckMissingError as e:
+        print(f"ERROR   {e}", file=sys.stderr)
+        return 1
+    except FileNotFoundError as e:
+        print(f"ERROR   元帳が見つかりません: {e}", file=sys.stderr)
+        return 1
+
+    for line in result.lines:
+        print(line, file=sys.stderr)
+    print(f"\nbean-check: {'OK' if result.ok else '不整合あり'}", file=sys.stderr)
+    return 0 if result.ok else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="shiwake", description="証憑から仕訳を組み立てるツールキット"
@@ -99,6 +134,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--message-file", type=Path, default=None, help="コミットメッセージのファイル")
     _add_denylist_arg(p)
     p.set_defaults(func=cmd_redact_check)
+
+    p = sub.add_parser("validate", help="document の検証（第1部 §9）")
+    p.add_argument("paths", nargs="*", help="検証する JSON またはディレクトリ")
+    p.set_defaults(func=cmd_validate)
+
+    p = sub.add_parser("bean-check", help="元帳の検査（bean-check を呼ぶ）")
+    p.add_argument("--main", default="ledger/main.beancount", help="元帳の入口ファイル")
+    p.set_defaults(func=cmd_bean_check)
 
     p = sub.add_parser("check-public-safe", help="公開リポジトリの安全性検査（第13部 §6.2）")
     p.add_argument("--root", default=".", help="リポジトリのルート")
