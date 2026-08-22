@@ -35,9 +35,15 @@ packages = ["src/shiwake"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# 環境によって自作パッケージの分類が変わり、CI だけ import 順で落ちることがある。
+# 明示して曖昧さを消す。
+src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["shiwake"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

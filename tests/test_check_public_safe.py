@@ -5,7 +5,6 @@ from __future__ import annotations
 import textwrap
 
 from conftest import fake_bank_account
-
 from shiwake.safety import Denylist
 from shiwake.safety import public_safe as ps
 

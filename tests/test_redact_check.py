@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 
 import pytest
+
 from conftest import (
     fake_bank_account,
     fake_card_number,
@@ -17,7 +18,6 @@ from conftest import (
     fake_non_luhn_16,
     fake_phone,
 )
-
 from shiwake.safety import Denylist, Scanner
 
 # ──────────────────────────────────────────────────────────
