@@ -358,3 +358,44 @@ def test_last4_is_allowed_in_the_account_master():
     """下4桁だけの保持は仕様上ゆるされている（第1部 §9.1）。"""
     master = '{"name": "架空銀行", "account_no_last4": "9876", "card_last4": "5432"}'
     assert Scanner(denylist=None, strict=True).scan_text(master, path="rules/accounts.yaml") == []
+
+
+def test_numeric_denylist_terms_do_not_match_inside_longer_numbers():
+    """★下4桁を部分一致で探すと、ハッシュやサイズの中に偶然含まれて誤爆する。
+
+    実際にロックファイルの sha256 の中で当たり、コミットできなくなった。
+    桁として独立しているときだけ止める。
+    """
+    dl = Denylist(["7412"])
+    scan = Scanner(denylist=dl)
+
+    # ハッシュやサイズの一部としては当てない
+    # （別ルールが鳴ることはあるので、denylist が鳴らないことだけを見る）
+    samples = ("hash = 'a1b74121f9'", "size = 1741299", "n = 74121")  # redact-check: ignore
+    for text in samples:
+        assert not any(f.rule == "denylist" for f in scan.scan_text(text))
+
+    # 桁として独立しているときは止める
+    assert any(f.rule == "denylist" for f in scan.scan_text('last4 = "7412"'))
+    assert any(f.rule == "denylist" for f in scan.scan_text("口座番号の下4桁は 7412 です"))
+
+
+def test_non_numeric_terms_still_match_as_substrings():
+    """名前は部分一致のまま。表記の一部だけ書かれても止めたい。"""
+    dl = Denylist(["架空商事"])
+    assert any(f.rule == "denylist" for f in Scanner(denylist=dl).scan_text("株式会社架空商事御中"))
+
+
+def test_denylist_does_not_look_inside_hashes():
+    """★下4桁のような短い数字は sha256 の中に偶然含まれる。
+
+    前後が英字なので数字の境界も抜けてしまう。
+    実際にロックファイルで当たり、コミットできなくなった。
+    """
+    dl = Denylist(["7412"])
+    scan = Scanner(denylist=dl)
+    lock_line = 'url = "https://example.com/pkg/fa1440e073cc7412bc919fed5708aaaa/x.whl"'
+    assert not any(f.rule == "denylist" for f in scan.scan_text(lock_line))
+
+    # ハッシュの外なら止まる
+    assert any(f.rule == "denylist" for f in scan.scan_text('last4 = "7412"'))

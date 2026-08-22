@@ -44,7 +44,15 @@ def check_accounts(path: Path) -> list[RuleIssue]:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     issues: list[RuleIssue] = []
 
-    for kind, entries in (("banks", data.get("banks")), ("cards", data.get("cards"))):
+    groups = (
+        ("banks", data.get("banks")),
+        ("cards", data.get("cards")),
+        # ★デビットは即時支払なので、締め日も引落日も持たない。
+        #   クレジットと同じ検査を掛けると、無いものを要求してしまう。
+        ("debit_cards", data.get("debit_cards")),
+        ("prepaid", data.get("prepaid")),
+    )
+    for kind, entries in groups:
         for entry in entries or []:
             target = f"{kind}/{entry.get('id', '?')}"
 

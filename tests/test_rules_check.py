@@ -129,3 +129,46 @@ def test_card_with_everything_unknown_warns_but_does_not_error(tmp_path):
     issues = check_accounts(write(tmp_path, body))
     assert issues
     assert all(i.severity == "warning" for i in issues)
+
+
+# ── 種別ごとに要求するものが違う ────────────────────────
+
+
+def test_debit_card_does_not_need_a_closing_day(tmp_path):
+    """★デビットは即時支払。締め日も引落日も存在しない。
+
+    クレジットと同じ検査を掛けると、無いものを要求する警告が出続ける。
+    """
+    body = """
+        debit_cards:
+          - id: debit_a
+            namespace: mixed
+            card_last4: "1234"
+            account: "Assets:Personal:Bank:B"
+            settlement: immediate
+    """
+    assert check_accounts(write(tmp_path, body)) == []
+
+
+def test_prepaid_does_not_need_a_closing_day(tmp_path):
+    body = """
+        prepaid:
+          - id: suica
+            namespace: mixed
+            account: "Assets:Personal:Prepaid:Suica"
+    """
+    assert check_accounts(write(tmp_path, body)) == []
+
+
+def test_debit_card_is_still_checked_for_namespace_and_last4(tmp_path):
+    """締め日は不要だが、名前空間と下4桁の規則は同じように効く。"""
+    body = """
+        debit_cards:
+          - id: debit_a
+            namespace: mixed
+            card_last4: "12345678"
+            account: "Assets:Business:Bank:B"
+    """
+    issues = check_accounts(write(tmp_path, body))
+    assert any("下4桁のみ" in i.message for i in issues)
+    assert any("*:Personal:*" in i.message for i in issues)

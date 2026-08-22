@@ -9,12 +9,19 @@
 
 from __future__ import annotations
 
+import re
 import unicodedata
 from collections.abc import Iterable
 from pathlib import Path
 
 #: これより短い語は誤爆するだけなので無視する
 MIN_TERM_LENGTH = 2
+
+#: 数字だけの語（口座やカードの下4桁）。
+#: ★部分一致で探すと、ハッシュやファイルサイズの中に偶然含まれて誤爆する。
+#:   実際に uv.lock の sha256 の中で当たった。
+#:   桁として独立しているときだけ止める。
+_DIGITS_ONLY = re.compile(r"^\d+$")
 
 DEFAULT_LOCATIONS = (
     Path.home() / ".config" / "shiwake" / "denylist.txt",
@@ -68,4 +75,12 @@ class Denylist:
         if not self._terms:
             return []
         haystack = _normalize(text)
-        return [original for norm, original in self._terms.items() if norm in haystack]
+        hits: list[str] = []
+        for norm, original in self._terms.items():
+            if _DIGITS_ONLY.match(norm):
+                # 数字だけの語は、前後が数字でないときだけ当てる
+                if re.search(rf"(?<!\d){re.escape(norm)}(?!\d)", haystack):
+                    hits.append(original)
+            elif norm in haystack:
+                hits.append(original)
+        return hits

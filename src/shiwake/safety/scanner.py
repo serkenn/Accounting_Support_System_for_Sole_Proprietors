@@ -314,7 +314,11 @@ class Scanner:
 
         # ── 名前ベースの層 ──────────────────────────────
         if self.denylist:
-            for hit in self.denylist.find(line):
+            # ★ハッシュの中は見ない。下4桁のような短い数字は、
+            #   sha256 の中に偶然含まれる（前後が英字なので数字境界も抜ける）。
+            #   実際にロックファイルで当たり、コミットできなくなった。
+            searchable = _HEX_RUN.sub("", line) if hex_runs else line
+            for hit in self.denylist.find(searchable):
                 findings.append(
                     Finding(
                         path=path,
