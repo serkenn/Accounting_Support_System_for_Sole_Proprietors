@@ -31,6 +31,7 @@ from shiwake.ledger.query import BeanQueryMissingError
 from shiwake.safety import Denylist, Scanner
 from shiwake.safety import public_safe as ps
 from shiwake.safety.data_repo import check_no_app_code
+from shiwake.safety.pinning import check_pins
 from shiwake.scopes import load_scopes
 from shiwake.tax import check_mapping_coverage, load_mapping
 from shiwake.web import build_web_data
@@ -237,11 +238,20 @@ def cmd_check_data_repo(args: argparse.Namespace) -> int:
     無ければ誤って公開側へ push する経路が存在しない。
     作業ディレクトリを間違えるだけで崩れるので、機械で止める。
     """
-    problems = check_no_app_code(Path(args.root), allow=args.allow)
+    root = Path(args.root)
+    problems = check_no_app_code(root, allow=args.allow)
     for p in problems:
         print(p.format(), file=sys.stderr)
-    print(f"\ncheck-data-repo: {len(problems)} 件", file=sys.stderr)
-    return 1 if problems else 0
+
+    # ★ピンが追従になっていないか（第13部 §4・§12）。
+    #   人が忘れると静かに壊れるので、ここで一緒に見る。
+    pins = check_pins(root / "pyproject.toml")
+    for pin in pins:
+        print(pin.format(), file=sys.stderr)
+
+    total = len(problems) + len(pins)
+    print(f"\ncheck-data-repo: {total} 件", file=sys.stderr)
+    return 1 if total else 0
 
 
 def cmd_reconcile(args: argparse.Namespace) -> int:
