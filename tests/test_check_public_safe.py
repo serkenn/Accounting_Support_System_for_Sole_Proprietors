@@ -185,3 +185,47 @@ def test_note_key_does_not_hide_a_real_value(tmp_path):
         encoding="utf-8",
     )
     assert ps.check_tax_templates_are_null(root) != []
+
+
+# ── コミットメッセージの検査（第13部 §6.3）────────────────
+# デノイリストが空だと早期 return するため、これらが唯一の実行経路になる。
+
+
+def _git_repo(tmp_path, subject: str):
+    import subprocess
+
+    root = _repo(tmp_path)
+    env = {
+        "GIT_AUTHOR_NAME": "t",
+        "GIT_AUTHOR_EMAIL": "t@example.com",
+        "GIT_COMMITTER_NAME": "t",
+        "GIT_COMMITTER_EMAIL": "t@example.com",
+        "PATH": "/usr/bin:/bin:/usr/local/bin",
+    }
+
+    def run(*a):
+        subprocess.run(["git", "-C", str(root), *a], check=True, capture_output=True, env=env)
+
+    run("init", "-q", "-b", "main")
+    (root / "a.txt").write_text("x", encoding="utf-8")
+    run("add", "-A")
+    run("-c", "core.hooksPath=/dev/null", "commit", "-q", "-m", subject)
+    return root
+
+
+def test_commit_message_scan_runs_without_crashing(tmp_path):
+    """区切りに NUL を argv へ直接渡すと ValueError になる。ここで気づけるようにする。"""
+    root = _git_repo(tmp_path, "fix: 明細行の税率別集計を修正")
+    assert ps.check_commit_messages(root, Denylist(["架空商事"])) == []
+
+
+def test_proper_noun_in_commit_message_is_caught(tmp_path):
+    root = _git_repo(tmp_path, "fix: 架空商事の請求書パースを修正")
+    findings = ps.check_commit_messages(root, Denylist(["架空商事"]))
+    assert any(f.rule == "denylist" for f in findings)
+    assert all("架空商事" not in f.excerpt for f in findings)
+
+
+def test_commit_scan_is_skipped_without_denylist(tmp_path):
+    root = _git_repo(tmp_path, "fix: 架空商事の請求書パースを修正")
+    assert ps.check_commit_messages(root, Denylist([])) == []

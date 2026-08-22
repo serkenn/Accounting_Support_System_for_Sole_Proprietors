@@ -243,7 +243,7 @@ def check_commit_messages(root: Path, denylist: Denylist | None, limit: int = 20
         return []
     try:
         out = subprocess.run(
-            ["git", "-C", str(root), "log", f"-{limit}", "--format=%H%n%s%n%b%n\x00"],
+            ["git", "-C", str(root), "log", f"-{limit}", "--format=%H%n%s%n%b%n%x00"],
             capture_output=True,
             text=True,
             check=True,
