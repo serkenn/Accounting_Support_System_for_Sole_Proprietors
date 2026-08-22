@@ -1,0 +1,4 @@
+node_modules/
+dist/
+# 生成した静的データ。元帳から作り直せる
+public/data/

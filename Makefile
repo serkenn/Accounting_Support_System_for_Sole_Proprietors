@@ -1,5 +1,7 @@
 .PHONY: help setup check test lint fmt safe
 
+.PHONY: web
+
 help:
 	@echo "setup  依存の同期と git フックの登録"
 	@echo "check  lint + test + safe （コミット前にこれを通す）"
@@ -10,10 +12,15 @@ setup:
 	git config core.hooksPath .githooks
 	@echo "git フックを .githooks に向けました"
 
-check: lint test safe
+check: lint test web safe
 
 test:
 	uv run pytest
+
+# フロントエンド。第3部 §2.1 の禁止事項と §12 のアクセシビリティも
+# ここで機械的に検査する。人の目でレビューし続けるのは無理なので。
+web:
+	cd web && npx tsc --noEmit && npx vitest run
 
 lint:
 	uv run ruff check .

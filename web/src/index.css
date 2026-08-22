@@ -1,0 +1,65 @@
+@import "@digital-go-jp/design-tokens/dist/tokens.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    /* DADS 標準。欧文の既定フォント（Inter 等）は使わない（第3部 §2.1） */
+    font-family: "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  body {
+    @apply bg-white text-solid-gray-900;
+  }
+
+  /* フォーカスリングを消さない（第3部 §12） */
+  :focus-visible {
+    @apply outline outline-2 outline-offset-2 outline-blue-900;
+  }
+}
+
+@layer utilities {
+  /* 動きを減らす設定を尊重する（第3部 §12） */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ── 印刷（第3部 §10）──────────────────────────────
+   後付けにしない。税務調査・税理士への提出で紙が要る。 */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 15mm;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+  }
+
+  /* 表の見出しをページまたぎで繰り返す */
+  thead {
+    display: table-header-group;
+  }
+
+  tr {
+    break-inside: avoid;
+  }
+
+  /* 背景色に頼らず、モノクロで判別できること */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
