@@ -206,6 +206,7 @@ def build_web_data(
     generated_at: str,
     commit: str = "",
     months: list[str] | None = None,
+    note: str | None = None,
 ) -> WebData:
     """静的 JSON 一式を組み立てる。"""
     known_months = months or sorted({_month_of(p.date) for p in postings})
@@ -262,6 +263,12 @@ def build_web_data(
             for d in sorted(documents, key=lambda x: x.get("doc_id") or "")
         ]
     }
+
+    if note:
+        # 合成データから作った出力であることを、全ファイルに残す（第13部 §6.2）
+        for payload in files.values():
+            if isinstance(payload, dict):
+                payload["_note"] = note
 
     return WebData(files=files)
 

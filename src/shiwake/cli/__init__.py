@@ -369,6 +369,7 @@ def cmd_build_web_data(args: argparse.Namespace) -> int:
         scopes=load_scopes(rules),
         generated_at=datetime.now().astimezone().isoformat(timespec="seconds"),
         commit=commit,
+        note=args.note,
     )
     written = data.write(Path(args.out))
     print(f"build-web-data: {len(written)} ファイルを {args.out} に出力しました", file=sys.stderr)
@@ -410,6 +411,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--documents", default="documents", help="documents ディレクトリ")
     p.add_argument("--rules", default="rules/scopes.yaml", help="ビューの範囲")
     p.add_argument("--out", default="web/public/data", help="出力先")
+    p.add_argument("--note", default=None, help="meta.json に添える注記")
     p.set_defaults(func=cmd_build_web_data)
 
     p = sub.add_parser("validate", help="document の検証（第1部 §9）")
