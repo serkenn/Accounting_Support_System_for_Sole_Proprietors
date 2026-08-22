@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-22T22:44:49+09:00",
-  "commit": "f54e2f7",
+  "generated_at": "2026-08-22T23:04:03+09:00",
+  "commit": "11d685d",
   "months": [
     "2026-07",
     "2026-08"
   ],
-  "latest_month": "2026-08",
+  "latest_month": "2026-07",
   "scopes": {
     "household": {
       "label": "家計"

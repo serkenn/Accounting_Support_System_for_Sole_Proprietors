@@ -210,7 +210,16 @@ def build_web_data(
 ) -> WebData:
     """静的 JSON 一式を組み立てる。"""
     known_months = months or sorted({_month_of(p.date) for p in postings})
-    latest = known_months[-1] if known_months else ""
+
+    # ★既定で開く月は「最後の月」ではなく「取引が一番多い直近の月」。
+    #   月初に1件だけ入った翌月を開くと、実質空の画面が出て
+    #   「壊れている」ように見える。
+    counts: dict[str, int] = defaultdict(int)
+    for p in postings:
+        if _is_expense(p.account) or _is_income(p.account):
+            counts[_month_of(p.date)] += 1
+    substantial = [m for m in known_months if counts[m] >= 3]
+    latest = (substantial or known_months or [""])[-1]
 
     meta = {
         "schema_version": SCHEMA_VERSION,

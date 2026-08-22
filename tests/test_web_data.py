@@ -178,3 +178,25 @@ def test_transaction_keeps_its_postings_for_the_inspector(scopes):
     tx = build(postings, scopes)["transactions-household.json"]["transactions"][0]
     assert len(tx["postings"]) == 4
     assert sum(x["amount"] for x in tx["postings"]) == 0
+
+
+def test_default_month_skips_a_nearly_empty_trailing_month(scopes):
+    """★月初に1件だけ入った翌月を既定で開くと、実質空の画面になる。
+
+    「壊れている」ように見えるので、取引のある月を既定にする。
+    """
+    postings = [
+        p("Expenses:Personal:Food:Groceries", 1000, (2026, 7, 3), txn="a"),
+        p("Expenses:Personal:Food:Eatout", 680, (2026, 7, 5), txn="b"),
+        p("Expenses:Personal:Transport:Train", 460, (2026, 7, 9), txn="c"),
+        p("Expenses:Personal:Food:Eatout", 950, (2026, 8, 2), txn="d"),
+    ]
+    files = build(postings, scopes)
+    assert files["meta.json"]["latest_month"] == "2026-07"
+    # 月の一覧には両方入る（切り替えられる）
+    assert files["meta.json"]["months"] == ["2026-07", "2026-08"]
+
+
+def test_single_month_is_still_the_default(scopes):
+    postings = [p("Expenses:Personal:Food:Eatout", 950, (2026, 8, 2))]
+    assert build(postings, scopes)["meta.json"]["latest_month"] == "2026-08"
