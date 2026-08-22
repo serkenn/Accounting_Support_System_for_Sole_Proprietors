@@ -1,0 +1,29 @@
+# 配信の構成（テンプレート）。
+#
+# SYNTHETIC — これは雛形です。実際の構成はデータリポジトリ側に置きます。
+#
+# ★ファイル名が compose.yaml だと、公開側の禁止ファイル検査が止めます。
+#   自宅の構成が漏れる経路なので、その名前を公開側に置かせない作りです。
+#   使うときは、データリポジトリ側へ compose.yaml として写してください。
+# ★ここにドメイン・内部IP・ホスト名・トークンを書かないでください（第13部 §7）。
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    volumes:
+      # 生成した静的データ
+      - ./web-data:/srv/web/data:ro
+      # ★原本と派生は read-only でマウントする。
+      #   Web から書ける経路を作らない（第9部 §6）
+      - ./files:/srv/files:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /config
+      - /data
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "127.0.0.1:8080:8080"

@@ -1,0 +1,19 @@
+# 静的サイトの配信（第9部 §6 / 第8部 §2.3）。
+#
+# ★アプリケーションのバックエンドは持たない。Caddy の静的配信で完結する。
+#   読みは静的、書きは別の小さな API（第9部 §10）。
+
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY web/package*.json ./
+RUN npm ci
+COPY web/ ./
+# データは実行時にマウントする。ビルド成果物に焼き込まない
+RUN rm -rf public/data && npm run build
+
+FROM caddy:2-alpine
+COPY --from=build /app/dist /srv/web
+COPY docker/Caddyfile /etc/caddy/Caddyfile
+
+# non-root で動かす（第1部 §11 S7）
+USER 1000:1000

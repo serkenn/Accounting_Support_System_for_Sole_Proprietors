@@ -1,0 +1,45 @@
+# 静的配信（第8部 §2.3）。
+#
+# ★/files/* は「外部から入ってきたファイル」の置き場なので、信頼しない前提で扱う。
+
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	# ── 原本と派生 ────────────────────────────────
+	handle /files/* {
+		root * /srv
+
+		# 中身から Content-Type を推測させない。
+		# 拡張子と中身が食い違うファイルで化ける経路を消す
+		header X-Content-Type-Options "nosniff"
+
+		# 万一スクリプトを含むファイルが混ざっても実行させない
+		header Content-Security-Policy "default-src 'none'; sandbox"
+
+		# コンテンツアドレスなので、内容が変わらない限り URL が変わらない
+		header Cache-Control "private, max-age=31536000, immutable"
+
+		# ★原本はインライン表示しない。ダウンロードのみ（第8部 §6）
+		@originals path /files/originals/*
+		header @originals Content-Disposition "attachment"
+
+		header -Server
+		file_server
+	}
+
+	# ── 静的 SPA ──────────────────────────────────
+	handle {
+		root * /srv/web
+		header X-Content-Type-Options "nosniff"
+		header X-Frame-Options "DENY"
+		header Referrer-Policy "no-referrer"
+		header -Server
+		try_files {path} /index.html
+		file_server
+	}
+
+	encode gzip zstd
+}
