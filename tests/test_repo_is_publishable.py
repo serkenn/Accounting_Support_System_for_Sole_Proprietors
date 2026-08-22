@@ -44,3 +44,28 @@ def test_hooks_are_executable():
         hook = hooks / name
         assert hook.is_file(), f"{name} がありません"
         assert hook.stat().st_mode & 0o111, f"{name} に実行権限がありません"
+
+
+def test_every_source_file_is_tracked_by_git():
+    """★ソースが .gitignore に巻き込まれていないこと。
+
+    データ用のディレクトリ名（ledger/ など）をアンカー無しで無視すると、
+    同名のソースディレクトリまで巻き込む。手元では動くので気づけない。
+    """
+    import subprocess
+
+    tracked = set(
+        subprocess.run(
+            ["git", "-C", str(ROOT), "ls-files", "src"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.split()
+    )
+    on_disk = {
+        str(p.relative_to(ROOT))
+        for p in (ROOT / "src").rglob("*")
+        if p.is_file() and "__pycache__" not in p.parts
+    }
+    missing = sorted(on_disk - tracked)
+    assert not missing, "git が追跡していないソースがあります: " + ", ".join(missing)

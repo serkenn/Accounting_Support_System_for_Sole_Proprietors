@@ -29,10 +29,12 @@ denylist.txt
 config/denylist.txt
 
 # 実データは公開側に存在してはいけない
-documents/
-ledger/
-links/
-evidence/
-exports/
-originals/
-out/
+# ★先頭の / は必須。無いと src/shiwake/ledger/ のような
+#   同名のソースディレクトリまで巻き込む。
+/documents/
+/ledger/
+/links/
+/evidence/
+/exports/
+/originals/
+/out/
