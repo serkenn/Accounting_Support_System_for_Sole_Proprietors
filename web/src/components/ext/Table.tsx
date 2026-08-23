@@ -35,7 +35,7 @@ export function Th({
   return (
     <th
       scope={scope}
-      className={`border-b-2 border-solid-gray-600 py-2 text-std-16B-170 text-solid-gray-900 ${
+      className={`border-b-2 border-solid-gray-600 px-3 py-2 text-std-16B-170 text-solid-gray-900 first:pl-0 last:pr-0 ${
         numeric ? "text-right" : "text-left"
       }`}
     >
@@ -58,7 +58,7 @@ export function Td({
   return (
     <td
       colSpan={colSpan}
-      className={`border-b border-solid-gray-300 py-2 align-baseline ${
+      className={`border-b border-solid-gray-300 px-3 py-2 align-baseline first:pl-0 last:pr-0 ${
         numeric ? "text-right" : "text-left"
       } ${className}`}
     >

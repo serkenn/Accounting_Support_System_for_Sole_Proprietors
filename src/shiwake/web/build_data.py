@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from shiwake.scopes import Scopes, matches
+from shiwake.web.labels import label_for, load_labels, missing_labels
 
 SCHEMA_VERSION = 1
 
@@ -40,6 +41,8 @@ class LedgerPosting:
 @dataclass
 class WebData:
     files: dict[str, Any] = field(default_factory=dict)
+    #: 表示名を持たない科目。あれば画面に英語が出るので、ビルドで止める。
+    unlabelled_accounts: list[str] = field(default_factory=list)
 
     def write(self, out_dir: Path) -> list[Path]:
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -69,16 +72,20 @@ def _is_income(account: str) -> bool:
 def _category_of(account: str) -> tuple[str, str]:
     """カテゴリ別集計の粒度と、その名前空間を返す。
 
-        Expenses:Personal:Food:Groceries → ("personal", "Food")
-        Expenses:Business:Supplies       → ("business", "Supplies")
+        Expenses:Personal:Food:Groceries → ("personal", "Expenses:Personal:Food")
+        Expenses:Business:Supplies       → ("business", "Expenses:Business:Supplies")
 
     ★家計ビューには事業の費用も出る（実際に家計から出ていったお金なので）。
       名前空間を分けて返さないと、画面上で区別がつかなくなる。
+
+    ★2つめは**科目のまま**返す。表示名はここでは付けない。
+      集計の鍵と画面の文字を同じものにすると、表示名を直したときに
+      集計が割れる。名前は出力の直前に引く。
     """
     parts = account.split(":")
     namespace = parts[1].lower() if len(parts) > 1 else "other"
-    name = parts[2] if len(parts) > 2 else parts[-1]
-    return namespace, name
+    key = ":".join(parts[:3]) if len(parts) > 2 else account
+    return namespace, key
 
 
 def _by_transaction(postings: list[LedgerPosting]) -> dict[str, list[LedgerPosting]]:
@@ -138,7 +145,7 @@ def _household_cash_flow(group: list[LedgerPosting], scopes: Scopes) -> CashFlow
             assigned += share
     else:
         # 費用の posting が無い出金（貸付・振替など）
-        by_category[("other", "その他")] += outflow
+        by_category[("other", "Expenses:Personal:Misc")] += outflow
 
     return CashFlow(month=month, inflow=0, outflow=outflow, by_category=dict(by_category))
 
@@ -190,7 +197,11 @@ def build_monthly_summary(postings: list[LedgerPosting], scope: str, scopes: Sco
 
 
 def build_categories(
-    postings: list[LedgerPosting], month: str, scope: str, scopes: Scopes
+    postings: list[LedgerPosting],
+    month: str,
+    scope: str,
+    scopes: Scopes,
+    labels: dict[str, str] | None = None,
 ) -> list[dict]:
     """カテゴリ別の支出（第3部 §8.1）。
 
@@ -218,11 +229,14 @@ def build_categories(
     return [
         {
             "namespace": namespace,
-            "category": name,
+            "account": key,
+            # ★英語の科目名を画面に出さない。表示名が無ければ空にして、
+            #   ビルド側で気づけるようにする（黙って英語を出さない）。
+            "category": label_for(key, labels) or "",
             "amount": amount,
             "ratio": round(amount / grand, 4) if grand else 0.0,
         }
-        for (namespace, name), amount in sorted(totals.items(), key=lambda kv: -kv[1])
+        for (namespace, key), amount in sorted(totals.items(), key=lambda kv: -kv[1])
     ]
 
 
@@ -302,9 +316,18 @@ def build_web_data(
     commit: str = "",
     months: list[str] | None = None,
     note: str | None = None,
+    labels: dict[str, str] | None = None,
 ) -> WebData:
     """静的 JSON 一式を組み立てる。"""
+    labels = labels if labels is not None else load_labels(None)
     known_months = months or sorted({_month_of(p.date) for p in postings})
+
+    # ★表示名の無い科目があれば、ここで気づけるようにする。
+    #   黙って英語が出ると、抜けていることに誰も気づかない。
+    #   実際に画面へ「Supplies」「Food」と出ていた。
+    unlabelled = missing_labels(
+        [p.account for p in postings if _is_expense(p.account) or _is_income(p.account)], labels
+    )
 
     # ★既定で開く月は「最後の月」ではなく「取引が一番多い直近の月」。
     #   月初に1件だけ入った翌月を開くと、実質空の画面が出て
@@ -335,7 +358,9 @@ def build_web_data(
         }
         files[f"categories-{scope}.json"] = {
             "scope": scope,
-            "months": {m: build_categories(postings, m, scope, scopes) for m in known_months},
+            "months": {
+                m: build_categories(postings, m, scope, scopes, labels) for m in known_months
+            },
         }
         files[f"transactions-{scope}.json"] = {
             "scope": scope,
@@ -374,7 +399,7 @@ def build_web_data(
             if isinstance(payload, dict):
                 payload["_note"] = note
 
-    return WebData(files=files)
+    return WebData(files=files, unlabelled_accounts=unlabelled)
 
 
 def matches_any(patterns: list[str], account: str) -> bool:

@@ -30,7 +30,9 @@ export function AppShell() {
   return (
     <div className="min-h-screen">
       <header className="no-print border-b-2 border-solid-gray-600">
-        <div className="flex flex-wrap items-center gap-4 px-4 py-3">
+        {/* ★見出しの帯も本文と同じ幅で揃える。揃えないと、広い画面で
+            「最終更新」だけが遠くに飛んで、視線が横に長く動く。 */}
+        <div className="mx-auto flex w-full max-w-[1160px] flex-wrap items-center gap-4 px-4 py-3">
           <h1 className="text-std-20B-150">家計簿</h1>
 
           {/* ★タブではなくセグメント切替。常にどちらを見ているかを明示する（第5部 §9.1） */}
@@ -71,7 +73,7 @@ export function AppShell() {
         </p>
       )}
 
-      <div className="flex">
+      <div className="mx-auto flex w-full max-w-[1160px]">
         <nav aria-label="画面" className="no-print hidden w-[200px] shrink-0 border-r border-solid-gray-300 py-4 desktop:block">
           <ul>
             {NAV.map((item) => (
@@ -84,7 +86,10 @@ export function AppShell() {
           </ul>
         </nav>
 
-        <main className="min-w-0 flex-1 px-4 py-6 pb-20 desktop:pb-6">
+        {/* ★幅に上限を置く。帳簿の表は列が少ないので、広い画面で
+            引き伸ばすと1行の中で目が横に大きく動き、金額と費目が
+            対応づかなくなる。読みやすさは行長で決まる。 */}
+        <main className="min-w-0 max-w-[880px] flex-1 px-4 py-6 pb-20 desktop:pb-6">
           <Outlet />
         </main>
       </div>

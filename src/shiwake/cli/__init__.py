@@ -37,6 +37,7 @@ from shiwake.safety.pinning import check_pins
 from shiwake.scopes import load_scopes
 from shiwake.tax import check_mapping_coverage, load_mapping
 from shiwake.web import build_web_data
+from shiwake.web.labels import load_labels
 from shiwake.web.read_ledger import load_ledger_postings
 
 
@@ -414,7 +415,20 @@ def cmd_build_web_data(args: argparse.Namespace) -> int:
         generated_at=datetime.now().astimezone().isoformat(timespec="seconds"),
         commit=commit,
         note=args.note,
+        labels=load_labels(rules.parent / "labels.yaml"),
     )
+
+    # ★表示名の無い科目があれば止める。黙って英語を出さない。
+    if data.unlabelled_accounts:
+        for account in data.unlabelled_accounts:
+            print(f"ERROR   [labels] {account}: 画面に出す名前がありません", file=sys.stderr)
+        print(
+            "\nbuild-web-data: 表示名の無い科目があります。"
+            "rules/labels.yaml に足すか、公開側の既定に足してください。",
+            file=sys.stderr,
+        )
+        return 1
+
     written = data.write(Path(args.out))
     print(f"build-web-data: {len(written)} ファイルを {args.out} に出力しました", file=sys.stderr)
     for path in written:
