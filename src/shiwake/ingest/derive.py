@@ -38,6 +38,9 @@ DEFAULT_MAX_PAGES = 20
 THUMB_NAME = "thumb.webp"
 VIEW_NAME = "view.webp"
 
+#: 画像化できない原本の拡張子。プレビューは作らないが、失敗でもない。
+NO_PREVIEW_SUFFIXES = frozenset({".csv"})
+
 
 @dataclass
 class Derivatives:
@@ -47,6 +50,8 @@ class Derivatives:
     page_count: int = 0
     skipped: bool = False
     error: str | None = None
+    #: 画像化できる形式ではない（CSV など）。失敗と区別する。
+    no_preview: bool = False
 
 
 def derived_dir(files: Path, sha256: str) -> Path:
@@ -144,6 +149,10 @@ def build_derivatives(
     """
     if not original.is_file():
         raise FileNotFoundError(original)
+
+    if original.suffix.lower() in NO_PREVIEW_SUFFIXES:
+        # ★中身は表で、絵ではない。UI は原本を直接ダウンロードさせる。
+        return Derivatives(no_preview=True)
 
     out_dir = derived_dir(files, sha256)
     if not force and _is_complete(out_dir):

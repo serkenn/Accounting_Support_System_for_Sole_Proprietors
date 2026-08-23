@@ -258,3 +258,29 @@ def test_jpeg_orientation_is_the_one_we_can_verify(tmp_path):
     result = derive.build_derivatives(original, SHA, tmp_path / "files")
     with Image.open(result.view) as out:
         assert out.size == (200, 400)
+
+
+# ── プレビューを持たない形式（CSV）──────────────────────
+
+
+def test_csv_has_no_preview_but_is_not_an_error(tmp_path):
+    """★CSV は画像化できないが、それは「失敗」ではない。
+
+    失敗として返すと、UI に「プレビューを生成できませんでした」と出て、
+    壊れた原本と見分けがつかなくなる。区別して返す。
+    """
+    original = tmp_path / "meisai.csv"
+    original.write_text('"a","b"\r\n"1","2"\r\n', encoding="utf-8")
+    out = derive.build_derivatives(original, "cd" * 32, tmp_path / "files")
+    assert out.error is None
+    assert out.no_preview is True
+    assert out.thumb is None
+
+
+def test_broken_image_is_still_an_error(tmp_path):
+    """no_preview の追加が、本当の失敗を隠す抜け道にならないこと。"""
+    original = tmp_path / "broken.jpg"
+    original.write_bytes(b"\xff\xd8\xff" + b"\x00" * 64)
+    out = derive.build_derivatives(original, "ef" * 32, tmp_path / "files")
+    assert out.error is not None
+    assert out.no_preview is False
