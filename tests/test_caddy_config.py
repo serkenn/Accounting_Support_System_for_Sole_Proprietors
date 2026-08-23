@@ -218,3 +218,25 @@ def test_caddy_does_not_decide_authentication():
     text = (ROOT / "docker" / "Caddyfile").read_text(encoding="utf-8")
     assert "basicauth" not in text
     assert "forward_auth" not in text
+
+
+def test_web_keeps_the_capability_its_binary_requires():
+    """★cap_drop: ALL だけだと Caddy は **起動しない**。
+
+    Caddy のバイナリには cap_net_bind_service=+ep が付いている。
+    effective ビットの立ったファイルを実行するとき、Linux は
+    ファイルの permitted 権限を全部取得できたかを確かめ、
+    取れなければ execve を EPERM で失敗させる（capabilities(7)）。
+
+    実際にこれで再起動を繰り返し、502 になった。
+    """
+    web = _compose()["services"]["ledger-web"]
+    assert "ALL" in web["cap_drop"]
+    assert web.get("cap_add") == ["NET_BIND_SERVICE"]
+
+
+def test_ingest_drops_every_capability():
+    """こちらは Python なのでファイル権限が無い。全部落とせる。"""
+    ingest = _compose()["services"]["ledger-ingest"]
+    assert ingest["cap_drop"] == ["ALL"]
+    assert "cap_add" not in ingest
