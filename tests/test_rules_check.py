@@ -214,3 +214,19 @@ def test_debit_card_without_account_is_an_error(tmp_path):
     """
     issues = check_accounts(write(tmp_path, body))
     assert any(i.severity == "error" for i in issues)
+
+
+def test_unknown_key_is_an_error(tmp_path):
+    """★タイポで設定が黙って無効になるのを止める。
+
+    実際に一括置換で debit_day が別の名前に化け、締め日の設定が
+    効かなくなった。YAML は知らないキーを黙って受け取るので、
+    ここで見るしかない。
+    """
+    body = CARD.replace("closing_day: 15", "closing_day: 15\n        debit_cay: 10")
+    issues = check_accounts(write(tmp_path, body))
+    assert any(i.severity == "error" and "知らないキー" in i.message for i in issues)
+
+
+def test_known_keys_pass(tmp_path):
+    assert check_accounts(write(tmp_path, CARD)) == []

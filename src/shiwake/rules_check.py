@@ -22,6 +22,61 @@ Severity = Literal["error", "warning"]
 #: 下4桁として保存してよい形
 LAST4 = 4
 
+#: 種別ごとに書いてよいキー。
+#: ★見慣れないキーがあったら止める。
+#:   タイポで設定が黙って無効になるのを防ぐ。実際に一括置換で
+#:   debit_day が別の名前に化け、締め日の設定が効かなくなった。
+#:   YAML は知らないキーを黙って受け取るので、ここで見るしかない。
+KNOWN_KEYS: dict[str, set[str]] = {
+    "banks": {
+        "id",
+        "name",
+        "account_type",
+        "namespace",
+        "account",
+        "account_no_last4",
+        "branch_code",
+        "is_opening_balance_source",
+    },
+    "cards": {
+        "id",
+        "name",
+        "issuer",
+        "brand",
+        "namespace",
+        "liability_account",
+        "card_last4",
+        "debit_account",
+        "closing_day",
+        "debit_day",
+        "debit_month_offset",
+        "business_day_rule",
+        "verified_on",
+        "source_url",
+        "source_note",
+    },
+    "debit_cards": {
+        "id",
+        "name",
+        "brand",
+        "namespace",
+        "card_last4",
+        "account",
+        "settlement",
+        "verified_on",
+        "source_note",
+    },
+    "prepaid": {
+        "id",
+        "name",
+        "kind",
+        "namespace",
+        "account",
+        "charge_from",
+        "receipt_available",
+    },
+}
+
 
 @dataclass(frozen=True)
 class RuleIssue:
@@ -55,6 +110,18 @@ def check_accounts(path: Path) -> list[RuleIssue]:
     for kind, entries in groups:
         for entry in entries or []:
             target = f"{kind}/{entry.get('id', '?')}"
+
+            unknown = sorted(set(entry) - KNOWN_KEYS.get(kind, set()))
+            if unknown:
+                issues.append(
+                    RuleIssue(
+                        "error",
+                        target,
+                        f"知らないキーがあります: {', '.join(unknown)}。"
+                        "綴りを確かめてください。YAML は知らないキーを黙って受け取るので、"
+                        "タイポがあると設定が効かないまま気づけません",
+                    )
+                )
 
             if entry.get("namespace") not in ("business", "personal", "mixed"):
                 issues.append(
