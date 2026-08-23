@@ -17,8 +17,10 @@ from conftest import (
     fake_my_number,
     fake_non_luhn_16,
     fake_phone,
+    fake_short_card_number,
 )
 from shiwake.safety import Denylist, Scanner
+from shiwake.safety.scanner import _luhn_ok, _plausible_ms_epoch
 
 # ──────────────────────────────────────────────────────────
 # 高信頼シグネチャ — 文脈なしでエラーにしてよいもの
@@ -440,3 +442,32 @@ def test_impossible_dates_are_not_excused():
     digits = prefix + luhn_check_digit(prefix)
     assert len(digits) == 14
     assert any(f.rule == "card_number" for f in Scanner().scan_text(f"x {digits} y"))
+
+
+# ── ミリ秒エポックのファイル名（実際に当たった）───────────
+
+
+def test_millisecond_epoch_filename_is_not_a_card_number():
+    """★ブラウザが付けるダウンロード名は13桁のミリ秒エポックになる。
+
+    13桁は Luhn 候補の桁数に入り、**偶然通ることがある**。実際に
+    取り込みの記録で当たり、コミットできなくなった。
+
+    13桁のカード番号は旧 VISA だけで、必ず 4 で始まる。
+    2015〜2065年のミリ秒エポックは 1 か 2 で始まるので、重ならない。
+    """
+    findings = Scanner().scan_text("download_1787482925921.pdf", "manifest.jsonl")
+    assert not any(f.rule == "card_number" for f in findings)
+
+
+def test_thirteen_digit_visa_is_still_caught():
+    """エポックの除外が、本物の13桁カード番号を隠さないこと。"""
+    digits = fake_short_card_number()
+    assert _luhn_ok(digits), "テストの前提が崩れています"
+    findings = Scanner().scan_text(f'"card": "{digits}"', "a.json")
+    assert any(f.rule == "card_number" for f in findings)
+
+
+def test_epoch_outside_the_plausible_window_is_still_checked():
+    """窓を広げすぎない。範囲外は従来どおり Luhn で見る。"""
+    assert not _plausible_ms_epoch(fake_short_card_number())

@@ -134,6 +134,26 @@ def _looks_like_timestamp(digits: str) -> bool:
     return not (len(digits) == 14 and int(digits[12:14]) > 59)
 
 
+#: ミリ秒エポックとして「ありうる」範囲（2015-01-01 〜 2065-01-01）。
+#
+# ★13桁のカード番号は旧 VISA だけで、必ず 4 で始まる。
+#   この範囲のミリ秒エポックは 1 か 2 で始まるので、重ならない。
+#   窓を 2100 年まで広げると 4 で始まる値が入り、VISA と重なる。
+_MS_EPOCH_MIN = 1_420_070_400_000
+_MS_EPOCH_MAX = 3_000_000_000_000
+
+
+def _plausible_ms_epoch(digits: str) -> bool:
+    """ブラウザが付けるダウンロード名のミリ秒エポックか。
+
+    ★13桁は Luhn 候補の桁数に入り、**偶然通ることがある**。
+      実際に取り込みの記録で当たり、コミットできなくなった。
+    """
+    if len(digits) != 13:
+        return False
+    return _MS_EPOCH_MIN <= int(digits) <= _MS_EPOCH_MAX
+
+
 def _luhn_ok(digits: str) -> bool:
     total = 0
     for i, ch in enumerate(reversed(digits)):
@@ -278,7 +298,7 @@ class Scanner:
                 continue
             if _inside(m.span(), hex_runs) or not _luhn_ok(digits):
                 continue
-            if _looks_like_timestamp(digits):
+            if _looks_like_timestamp(digits) or _plausible_ms_epoch(digits):
                 continue  # 日時のファイル名。カード番号ではない
             add("card_number", "error", "カード番号（Luhn 検査を通過）", mask(raw), m.span())
 

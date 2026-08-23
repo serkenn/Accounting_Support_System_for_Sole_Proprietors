@@ -28,6 +28,16 @@ def fake_card_number() -> str:
     return prefix + luhn_check_digit(prefix)
 
 
+def fake_short_card_number() -> str:
+    """Luhn を通る 13 桁の架空のカード番号（旧 VISA の桁数）。
+
+    ★リテラルで書かないこと。13桁の Luhn 通過値をソースに置くと、
+      合成値でも自分の redact-check が止める（止まるのが正しい）。
+    """
+    prefix = "4" + "2" * 11  # 12桁
+    return prefix + luhn_check_digit(prefix)
+
+
 def fake_non_luhn_16() -> str:
     """16 桁だが Luhn を通らない数字列。"""
     card = fake_card_number()
