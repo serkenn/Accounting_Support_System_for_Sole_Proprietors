@@ -247,3 +247,33 @@ def test_credit_card_still_becomes_a_pending_liability():
     tx = _only(out)
     assert any(p.account.startswith("Liabilities:") for p in tx.postings)
     assert tx.tags != []
+
+
+# ── 支払手段が読めなかった領収書 ────────────────────────
+
+
+def test_unknown_payment_method_is_not_assumed_to_be_a_card():
+    """★支払手段が読めなかったものを、勝手にカード払いにしない。
+
+    現金だったなら現金が減っているはずで、カードの負債は立たない。
+    決めつけると、現金残高もカード負債も両方まちがう。
+    **貸借は合うので検算では気づけない。**
+    """
+    r = Receipt("doc_r1", date(2026, 7, 14), "サンプルストア", 1234, None, None)
+    out = build_month([r], [], Links({}), CAT, settlement_accounts=SETTLE)
+    accounts = {p.account for p in _only(out).postings}
+    assert "Liabilities:Personal:CreditCard:Unknown" not in accounts
+    assert any("Unsettled" in a for a in accounts)
+
+
+def test_unknown_payment_method_is_reported():
+    r = Receipt("doc_r1", date(2026, 7, 14), "サンプルストア", 1234, None, None)
+    out = build_month([r], [], Links({}), CAT, settlement_accounts=SETTLE)
+    assert any(i.doc_id == "doc_r1" for i in out.issues)
+
+
+def test_unknown_payment_method_is_marked_pending():
+    """あとで戻ってこられるように印を残す。"""
+    r = Receipt("doc_r1", date(2026, 7, 14), "サンプルストア", 1234, None, None)
+    out = build_month([r], [], Links({}), CAT, settlement_accounts=SETTLE)
+    assert _only(out).tags != []

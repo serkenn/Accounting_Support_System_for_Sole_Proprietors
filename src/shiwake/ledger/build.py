@@ -280,6 +280,23 @@ def build_month(
                 )
                 continue
             meta, tags = {"doc_id": receipt.doc_id}, []
+        elif receipt.payment_method is None:
+            # ★読めなかった支払手段を、カード払いと決めつけない。
+            #   現金だったなら現金が減っているはずで、負債は立たない。
+            #   決めつけると現金残高もカード負債も両方まちがう。
+            #   仮勘定に置いて、あとで戻ってこられるようにする。
+            result.issues.append(
+                BuildIssue(
+                    "warning",
+                    receipt.doc_id,
+                    "支払手段が読み取れていません。"
+                    f"{UNSETTLED_ACCOUNT} に仮置きしました。"
+                    "原本を見て現金かカードかを入れてください",
+                )
+            )
+            credit = UNSETTLED_ACCOUNT
+            meta = {"doc_id": receipt.doc_id, "pending": "TRUE"}
+            tags = [TAG_PENDING]
         else:
             # ★カード払いだが明細が未取込。届いたらリンクされ pending が外れる
             credit = (
@@ -303,6 +320,12 @@ def build_month(
 
     return result
 
+
+#: 支払手段が読み取れなかったものの仮置き先。
+#:
+#: ★カードの負債と混ぜない。混ぜると、実は現金だったものが
+#:   カード負債として残り、貸借対照表が静かに狂う。
+UNSETTLED_ACCOUNT = "Liabilities:Personal:Unsettled"
 
 #: 即時に決済され、負債を残さない支払手段。
 _IMMEDIATE_METHODS = frozenset({"debit_card", "qr_code", "ic_card"})
