@@ -296,3 +296,56 @@ def test_foreign_receipt_must_not_guess_the_yen_amount():
 
 def test_currency_must_be_an_iso_code():
     assert "schema" in rules(v.validate_document(receipt(currency="ドル")))
+
+
+# ── 検針票（第2部 §4.3 — 按分の分母になる）──────────────
+
+
+def utility(**over):
+    doc = _envelope(
+        doc_id="doc_2026-05-19_power_a1b2c3",
+        type="utility_bill",
+        origin="electronic",
+        paper_retained=None,
+        utility="electricity",
+        provider="○○電力",
+        period={"from": "2026-04-16", "to": "2026-05-19"},
+        reading_date="2026-05-19",
+        kwh_total=350,
+        total=11029,
+        tax_amount=1002,
+        payment={"method": "direct_debit", "debit_date": None, "account_hint": None},
+    )
+    doc.update(over)
+    return doc
+
+
+def test_valid_utility_bill_passes():
+    assert v.validate_document(utility()) == []
+
+
+def test_electricity_bill_carries_the_denominator():
+    """★kwh_total が按分の分母になる。ここが無いと実測按分ができない。"""
+    doc = utility()
+    assert doc["kwh_total"] == 350
+    assert v.validate_document(doc) == []
+
+
+def test_unreadable_usage_must_be_flagged():
+    """使用量が読めないなら null にして隔離する。推測で埋めない。"""
+    doc = utility(kwh_total=None, needs_review=True, review_reason="使用量が読み取れません")
+    assert v.validate_document(doc) == []
+
+
+def test_reading_period_is_not_a_calendar_month():
+    """★検針期間は暦月と一致しない。按分では分子の期間もここに合わせる。"""
+    doc = utility()
+    assert doc["period"]["from"][5:7] != doc["period"]["to"][5:7]
+
+
+def test_unknown_utility_kind_is_rejected():
+    assert "schema" in rules(v.validate_document(utility(utility="electricity_and_gas")))
+
+
+def test_utility_bill_rejects_unknown_fields():
+    assert "schema" in rules(v.validate_document(utility(surprise=1)))

@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shiwake.invalid/schemas/utility_bill.schema.json",
+  "title": "検針票・公共料金",
+  "$comment": "★電気の kwh_total は家事按分の分母になる（第2部 §4.3）。分母は必ず検針票の値を使い、スマートメーターの値では代用しない。",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/envelope"
+    }
+  ],
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "utility_bill"
+    },
+    "utility": {
+      "type": "string",
+      "enum": [
+        "electricity",
+        "gas",
+        "water",
+        "sewage"
+      ]
+    },
+    "provider": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "contract_no_last4": {
+      "$ref": "common.schema.json#/$defs/last4"
+    },
+    "period": {
+      "$ref": "common.schema.json#/$defs/period",
+      "description": "★検針期間。暦月と一致しない。按分では分子の期間もここに合わせる"
+    },
+    "reading_date": {
+      "$ref": "common.schema.json#/$defs/date"
+    },
+    "kwh_total": {
+      "description": "電気のみ。★按分の分母。読めなければ null にして needs_review",
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "usage_amount": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "電気以外の使用量"
+    },
+    "usage_unit": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "breakdown": {
+      "type": "object",
+      "properties": {
+        "basic_charge": {
+          "$ref": "common.schema.json#/$defs/amount"
+        },
+        "energy_charge": {
+          "$ref": "common.schema.json#/$defs/amount"
+        },
+        "fuel_adjustment": {
+          "$ref": "common.schema.json#/$defs/amount"
+        },
+        "renewable_levy": {
+          "$ref": "common.schema.json#/$defs/amount"
+        }
+      },
+      "additionalProperties": false
+    },
+    "total": {
+      "$ref": "common.schema.json#/$defs/amount"
+    },
+    "tax_amount": {
+      "$ref": "common.schema.json#/$defs/amount"
+    },
+    "payment": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "debit_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "account_hint": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "utility",
+    "provider",
+    "period",
+    "total"
+  ],
+  "unevaluatedProperties": false
+}

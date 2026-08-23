@@ -32,6 +32,7 @@ SCHEMA_FILES = {
     "receipt": "receipt.schema.json",
     "card_statement": "card_statement.schema.json",
     "payslip": "payslip.schema.json",
+    "utility_bill": "utility_bill.schema.json",
 }
 
 
