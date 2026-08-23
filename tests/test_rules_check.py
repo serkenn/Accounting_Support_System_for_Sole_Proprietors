@@ -294,3 +294,91 @@ def test_empty_accounts_file_is_fine(tmp_path):
     p = tmp_path / "accounts.yaml"
     p.write_text("", encoding="utf-8")
     assert check_accounts(p) == []
+
+
+# ── 同じカードが別の下4桁で売上票に出る ─────────────────
+
+
+def _debit(extra: str = "") -> str:
+    return (
+        "version: 1\n"
+        "debit_cards:\n"
+        "  - id: debit_d\n"
+        '    name: "d"\n'
+        "    namespace: mixed\n"
+        '    card_last4: "1111"\n'
+        '    account: "Assets:Personal:Bank:G"\n'
+        "    settlement: immediate\n"
+        "    verified_on: 2026-08-23\n" + extra
+    )
+
+
+def test_version_is_a_known_section(tmp_path):
+    p = tmp_path / "accounts.yaml"
+    p.write_text(_debit(), encoding="utf-8")
+    assert not any("知らない節" in i.message for i in check_accounts(p))
+
+
+def test_alias_last4_is_accepted(tmp_path):
+    """★同じカードが店の売上票に別の下4桁で出ることがある。
+
+    別カードとして登録すると1つの支払いが2つの口座に分かれ、
+    どちらの残高も合わなくなる。同じカードの別名として持たせる。
+    """
+    p = tmp_path / "accounts.yaml"
+    p.write_text(
+        _debit('    also_appears_as:\n      - card_last4: "2222"\n        seen_on: 2026-08-07\n'),
+        encoding="utf-8",
+    )
+    assert [i for i in check_accounts(p) if i.severity == "error"] == []
+
+
+def test_alias_must_be_exactly_four_digits(tmp_path):
+    """下4桁を超える桁を持たせない（第1部 §9.1）。
+
+    ★桁あふれの例に「カード番号らしい長さ」を書かないこと。
+      公開リポジトリにカード番号の形をした文字列を置くと、
+      合成値でも redact-check が止める（止まるのが正しい）。
+      5桁で同じ規則を試せる。
+    """
+    p = tmp_path / "accounts.yaml"
+    p.write_text(
+        _debit('    also_appears_as:\n      - card_last4: "12345"\n        seen_on: 2026-08-07\n'),
+        encoding="utf-8",
+    )
+    assert any(i.severity == "error" for i in check_accounts(p))
+
+
+def test_alias_requires_the_date_it_was_seen(tmp_path):
+    """★いつの証憑で確認したかが無いと、あとで裏を取れない。"""
+    p = tmp_path / "accounts.yaml"
+    p.write_text(
+        _debit('    also_appears_as:\n      - card_last4: "2222"\n'),
+        encoding="utf-8",
+    )
+    assert any(i.severity == "error" for i in check_accounts(p))
+
+
+def test_alias_must_not_collide_with_another_card(tmp_path):
+    """★別カードの下4桁を別名にすると、支払いの帰属が二重になる。"""
+    p = tmp_path / "accounts.yaml"
+    p.write_text(
+        "version: 1\n"
+        "cards:\n"
+        "  - id: card_b\n"
+        '    name: "b"\n'
+        "    namespace: mixed\n"
+        '    card_last4: "3333"\n'
+        '    liability_account: "Liabilities:Personal:CreditCard:B"\n'
+        '    debit_account: "Assets:Personal:Bank:A"\n'
+        "    closing_day: 15\n"
+        "    debit_day: 10\n"
+        "    debit_month_offset: 1\n"
+        "    verified_on: 2026-08-23\n"
+        + _debit(
+            '    also_appears_as:\n      - card_last4: "3333"\n        seen_on: 2026-08-07\n'
+        ).split("version: 1\n")[1],
+        encoding="utf-8",
+    )
+    issues = check_accounts(p)
+    assert any(i.severity == "error" and "3333" in i.message for i in issues)

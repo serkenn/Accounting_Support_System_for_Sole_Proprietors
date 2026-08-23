@@ -28,7 +28,7 @@ LAST4 = 4
 #:   debit_day が別の名前に化け、締め日の設定が効かなくなった。
 #:   YAML は知らないキーを黙って受け取るので、ここで見るしかない。
 #: accounts.yaml のトップレベルに書いてよい節。
-KNOWN_SECTIONS = frozenset({"banks", "cards", "debit_cards", "prepaid", "cash"})
+KNOWN_SECTIONS = frozenset({"version", "banks", "cards", "debit_cards", "prepaid", "cash"})
 
 KNOWN_KEYS: dict[str, set[str]] = {
     "banks": {
@@ -58,6 +58,7 @@ KNOWN_KEYS: dict[str, set[str]] = {
         "source_url",
         "source_note",
         "contactless",
+        "also_appears_as",
         "note",
     },
     "debit_cards": {
@@ -66,6 +67,7 @@ KNOWN_KEYS: dict[str, set[str]] = {
         "brand",
         "namespace",
         "card_last4",
+        "also_appears_as",
         "account",
         "settlement",
         "verified_on",
@@ -182,6 +184,64 @@ def check_accounts(path: Path) -> list[RuleIssue]:
             elif kind == "debit_cards":
                 issues.extend(_check_debit_card(entry, target))
 
+    issues.extend(_check_alias_last4(data))
+    return issues
+
+
+def _all_last4(data: dict) -> dict[str, str]:
+    """登録済みの下4桁 → その持ち主。別名の衝突を見るために使う。"""
+    owners: dict[str, str] = {}
+    for kind in ("cards", "debit_cards", "prepaid"):
+        for entry in data.get(kind) or []:
+            last4 = entry.get("card_last4")
+            if last4:
+                owners[str(last4)] = f"{kind}/{entry.get('id', '?')}"
+    return owners
+
+
+def _check_alias_last4(data: dict) -> list[RuleIssue]:
+    """同じカードが、店の売上票に別の下4桁で出ることがある。
+
+    ★別カードとして登録すると、1つの支払いが2つの口座に分かれ、
+      どちらの残高も合わなくなる。だから別名として1枚に束ねる。
+      ただし束ね先を間違えると今度は帰属が狂うので、
+      **いつの証憑で確認したか**を必ず持たせる。
+    """
+    issues: list[RuleIssue] = []
+    owners = _all_last4(data)
+    for kind in ("cards", "debit_cards"):
+        for entry in data.get(kind) or []:
+            target = f"{kind}/{entry.get('id', '?')}"
+            for item in entry.get("also_appears_as") or []:
+                last4 = item.get("card_last4")
+                if last4 is None or not _last4_ok(last4):
+                    issues.append(
+                        RuleIssue(
+                            "error",
+                            target,
+                            "also_appears_as の card_last4 は下4桁のみです",
+                        )
+                    )
+                    continue
+                if not item.get("seen_on"):
+                    issues.append(
+                        RuleIssue(
+                            "error",
+                            target,
+                            f"also_appears_as の {last4} に seen_on がありません。"
+                            "いつの証憑で確認したかが無いと、あとで裏を取れません",
+                        )
+                    )
+                owner = owners.get(str(last4))
+                if owner and owner != target:
+                    issues.append(
+                        RuleIssue(
+                            "error",
+                            target,
+                            f"下4桁 {last4} は {owner} として登録済みです。"
+                            "別名にすると、その支払いがどちらの口座からも出ることになります",
+                        )
+                    )
     return issues
 
 
