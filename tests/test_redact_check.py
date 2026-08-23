@@ -399,3 +399,44 @@ def test_denylist_does_not_look_inside_hashes():
 
     # ハッシュの外なら止まる
     assert any(f.rule == "denylist" for f in scan.scan_text('last4 = "7412"'))
+
+
+# ──────────────────────────────────────────────────────────
+# 日時のファイル名を、カード番号と間違えない
+# ──────────────────────────────────────────────────────────
+
+
+def test_scanner_timestamp_filename_is_not_a_card_number():
+    """★スキャナが付けるファイル名は YYYYMMDDhhmmss で14桁になり、
+    Luhn 候補の桁数に入る。そして**偶然 Luhn を通ることがある**。
+
+    実際に取り込みの記録で当たり、コミットできなくなった。
+    """
+    name = "Epson_" + "20260724221029" + ".pdf"
+    assert not any(f.rule == "card_number" for f in Scanner().scan_text(name))
+
+
+def test_other_timestamp_shapes_are_also_excluded():
+    """★12桁の日時は「文脈のない12桁」にも当たる。そちらも外す。"""
+    stamps = ("20260101000000", "202607242210", "20260724")  # redact-check: ignore
+    for stamp in stamps:
+        text = f'source_name = "IMG_{stamp}.jpg"'
+        findings = Scanner(strict=True).scan_text(text, path="x.py")
+        assert findings == [], f"{stamp}: {[f.rule for f in findings]}"
+
+
+def test_a_real_card_number_is_still_caught():
+    """★除外を入れても、本物のカード番号は捕まえ続けること。"""
+    findings = Scanner().scan_text(f"カード {fake_card_number()}")
+    assert any(f.rule == "card_number" for f in findings)
+
+
+def test_impossible_dates_are_not_excused():
+    """日付として成立しない14桁は、除外の対象にしない。"""
+    from conftest import luhn_check_digit
+
+    # 月が 99 なので日時としては成立しない
+    prefix = "2026993222102"
+    digits = prefix + luhn_check_digit(prefix)
+    assert len(digits) == 14
+    assert any(f.rule == "card_number" for f in Scanner().scan_text(f"x {digits} y"))

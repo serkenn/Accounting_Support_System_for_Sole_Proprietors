@@ -110,6 +110,30 @@ _ACCOUNT_KEY = re.compile(
 _LAST4_KEY = re.compile(r"last[_ ]?4|下4桁|下四桁", re.IGNORECASE)
 
 
+def _looks_like_timestamp(digits: str) -> bool:
+    """日時として読める数字列か。
+
+    ★スキャナやカメラが付けるファイル名は YYYYMMDDhhmmss の形になり、
+      14桁なので Luhn 候補の桁数に入る。そして**偶然 Luhn を通ることがある**。
+      実際に取り込みの記録で当たり、コミットできなくなった。
+
+    日付として成立するかを見て、成立するならカード番号とはみなさない。
+    """
+    if len(digits) not in (8, 12, 14):
+        return False
+    year = int(digits[:4])
+    if not (1900 <= year <= 2200):
+        return False
+    month, day = int(digits[4:6]), int(digits[6:8])
+    if not (1 <= month <= 12 and 1 <= day <= 31):
+        return False
+    if len(digits) >= 12:
+        hour, minute = int(digits[8:10]), int(digits[10:12])
+        if not (hour <= 23 and minute <= 59):
+            return False
+    return not (len(digits) == 14 and int(digits[12:14]) > 59)
+
+
 def _luhn_ok(digits: str) -> bool:
     total = 0
     for i, ch in enumerate(reversed(digits)):
@@ -254,6 +278,8 @@ class Scanner:
                 continue
             if _inside(m.span(), hex_runs) or not _luhn_ok(digits):
                 continue
+            if _looks_like_timestamp(digits):
+                continue  # 日時のファイル名。カード番号ではない
             add("card_number", "error", "カード番号（Luhn 検査を通過）", mask(raw), m.span())
 
         for m in _EMAIL.finditer(line):
@@ -308,6 +334,8 @@ class Scanner:
                 continue
             if typed and not _inside(m.span(), quoted):
                 continue  # 数値リテラル＝金額。弾かない
+            if _looks_like_timestamp(run):
+                continue  # 日時。番号ではない
             rule = f"bare_digits_{len(run)}"
             label = "口座番号" if len(run) == 7 else "マイナンバー"
             add(rule, severity, f"文脈のない{len(run)}桁（{label}の可能性）", mask(run), m.span())
