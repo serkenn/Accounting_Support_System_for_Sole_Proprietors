@@ -77,6 +77,7 @@ KNOWN_KEYS: dict[str, set[str]] = {
         "id",
         "name",
         "kind",
+        "method",
         "namespace",
         "account",
         "charge_from",

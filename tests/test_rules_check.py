@@ -382,3 +382,22 @@ def test_alias_must_not_collide_with_another_card(tmp_path):
     )
     issues = check_accounts(p)
     assert any(i.severity == "error" and "3333" in i.message for i in issues)
+
+
+def test_prepaid_may_declare_its_payment_method(tmp_path):
+    """★残高は交通系IC だけではない。コード決済も同じ形で持つ。
+
+    method が知らないキー扱いだと、コード決済の残高を登録できない。
+    """
+    p = tmp_path / "accounts.yaml"
+    p.write_text(
+        "version: 1\n"
+        "prepaid:\n"
+        "  - id: samplepay\n"
+        '    name: "サンプルペイ"\n'
+        "    method: qr_code\n"
+        "    namespace: mixed\n"
+        '    account: "Assets:Personal:Prepaid:SamplePay"\n',
+        encoding="utf-8",
+    )
+    assert [i for i in check_accounts(p) if i.severity == "error"] == []
