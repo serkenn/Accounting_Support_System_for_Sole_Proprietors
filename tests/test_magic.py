@@ -180,3 +180,15 @@ def test_binary_with_commas_is_not_csv(tmp_path):
 
 def test_csv_is_in_the_allowlist():
     assert "text/csv" in magic.ALLOWED_MEDIA_TYPES
+
+
+def test_detect_bytes_covers_both_magic_and_text():
+    """★判定の入口を1つにする。
+
+    pipeline が detect() を直接呼んでいたため、許可リストに
+    text/csv を足しても CSV が通らなかった。判定経路が2つあると、
+    片方だけ直して気づけない。
+    """
+    assert magic.detect_bytes(JPEG).media_type == "image/jpeg"
+    assert magic.detect_bytes(BANK_CSV.encode("utf-8")).media_type == "text/csv"
+    assert magic.detect_bytes(b"<html>\n<p>a,b</p>\n<p>c,d</p>\n") is None

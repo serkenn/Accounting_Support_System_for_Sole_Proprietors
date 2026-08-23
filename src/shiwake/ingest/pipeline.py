@@ -24,7 +24,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .derive import build_derivatives
-from .magic import ALLOWED_MEDIA_TYPES, detect
+from .magic import ALLOWED_MEDIA_TYPES, detect_bytes
 from .manifest import Manifest, ManifestEntry
 from .origin import resolve
 
@@ -157,7 +157,7 @@ def _ingest_one(
     dry_run: bool,
 ) -> Ingested | Duplicate:
     head = path.open("rb").read(65536)
-    fmt = detect(head)
+    fmt = detect_bytes(head)
     if fmt is None:
         raise IngestError(
             "ファイルの種別を判定できません。"

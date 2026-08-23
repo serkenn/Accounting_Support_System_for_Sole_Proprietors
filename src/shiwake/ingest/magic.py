@@ -123,13 +123,20 @@ def detect_text(data: bytes) -> FileFormat | None:
     return _CSV
 
 
+def detect_bytes(data: bytes) -> FileFormat | None:
+    """判定の唯一の入口。magic bytes → テキストの順に見る。
+
+    ★呼ぶ側が detect() を直接使うと、テキスト形式を足したときに
+      片方の経路だけ直して通らなくなる。実際に一度そうなった。
+    """
+    fmt = detect(data)
+    if fmt is not None:
+        return fmt
+    return detect_text(data)
+
+
 def detect_file(path: Path) -> FileFormat | None:
     """★中身だけで決める。ファイル名の拡張子は見ない。"""
     with path.open("rb") as fh:
-        head = fh.read(HEADER_BYTES)
-        fmt = detect(head)
-        if fmt is not None:
-            return fmt
-        # magic bytes で決まらなければテキストとして見る。
         # 読むだけで、原本のバイト列には触らない。
-        return detect_text(head + fh.read(_TEXT_SNIFF_BYTES - len(head)))
+        return detect_bytes(fh.read(_TEXT_SNIFF_BYTES))
