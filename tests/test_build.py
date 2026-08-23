@@ -277,3 +277,59 @@ def test_unknown_payment_method_is_marked_pending():
     r = Receipt("doc_r1", date(2026, 7, 14), "サンプルストア", 1234, None, None)
     out = build_month([r], [], Links({}), CAT, settlement_accounts=SETTLE)
     assert _only(out).tags != []
+
+
+# ── 明細行ごとの科目指定 ────────────────────────────────
+#
+# ★店名だけで決まらない店がある。Amazon も百均も、事業の部品を
+#   買うことも私用のこともある。店名のルールに書くと、
+#   都度の判断を機械が勝手に上書きしてしまう。
+
+
+def test_line_account_decides_when_the_merchant_rule_cannot():
+    out = build_month(
+        [],
+        [line(desc="どこかの通販", amount=5000)],
+        Links({}),
+        CAT,
+        line_accounts={"doc_stmt:L001": "Expenses:Business:Supplies"},
+    )
+    tx = _only(out)
+    assert "Expenses:Business:Supplies" in {p.account for p in tx.postings}
+
+
+def test_line_account_wins_over_the_merchant_rule():
+    """★都度の判断が、店名のルールに負けないこと。"""
+    out = build_month(
+        [],
+        [line(desc="サンプルストア ワタダ", amount=5000)],
+        Links({}),
+        CAT,
+        line_accounts={"doc_stmt:L001": "Expenses:Business:Supplies"},
+    )
+    accounts = {p.account for p in _only(out).postings}
+    assert "Expenses:Business:Supplies" in accounts
+    assert "Expenses:Personal:Food:Groceries" not in accounts
+
+
+def test_undecided_line_stops_the_build():
+    out = build_month([], [line(desc="どこかの通販", amount=5000)], Links({}), CAT)
+    assert out.transactions == []
+    assert out.errors
+
+
+def test_undecided_lines_are_listed_for_the_human():
+    """★決めてもらう分を、貼れる形で出す。書き写させると写し間違いが混ざる。"""
+    out = build_month([], [line(desc="どこかの通販", amount=5000)], Links({}), CAT)
+    assert out.undecided_lines == [("doc_stmt:L001", "どこかの通販", 5000)]
+
+
+def test_stub_is_pasteable_yaml():
+    import yaml
+
+    from shiwake.ledger.line_accounts import stub_for
+
+    text = stub_for([("doc_stmt:L001", "どこかの通販", 5000)])
+    parsed = yaml.safe_load(text)
+    assert "doc_stmt:L001" in parsed["lines"]
+    assert parsed["lines"]["doc_stmt:L001"] is None  # 埋めるのは人

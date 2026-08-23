@@ -97,6 +97,9 @@ class BuildIssue:
 class BuildResult:
     transactions: list[Transaction] = field(default_factory=list)
     issues: list[BuildIssue] = field(default_factory=list)
+    #: 科目が決まっていないカード明細行（key, 店名, 金額）。
+    #: 人に決めてもらう分を、貼れる形で出すために持ち歩く。
+    undecided_lines: list[tuple[str, str, int]] = field(default_factory=list)
 
     @property
     def errors(self) -> list[BuildIssue]:
@@ -133,6 +136,15 @@ def _bridge(expense_account: str, credit_account: str, amount: int) -> list[Post
     return []
 
 
+class _Chosen:
+    """行ごとの指定と、店名のルールの返り値を同じ形で扱うための小さな入れ物。"""
+
+    __slots__ = ("account",)
+
+    def __init__(self, account: str) -> None:
+        self.account = account
+
+
 def _expense_transaction(
     when: date,
     payee: str,
@@ -165,6 +177,7 @@ def build_month(
     cash_account: str = "Assets:Personal:Cash",
     receipt_payees: dict[str, str] | None = None,
     settlement_accounts: dict[str, str] | None = None,
+    line_accounts: dict[str, str] | None = None,
 ) -> BuildResult:
     """1か月分の仕訳を組み立てる。
 
@@ -175,6 +188,7 @@ def build_month(
     result = BuildResult()
     receipt_accounts = receipt_accounts or {}
     settlement_accounts = settlement_accounts or {}
+    line_accounts = line_accounts or {}
     receipt_payees = receipt_payees or {}
     by_doc = {r.doc_id: r for r in receipts}
     by_key = {line.key: line for line in card_lines}
@@ -225,17 +239,24 @@ def build_month(
     for line in sorted(card_lines, key=lambda x: (x.date, x.line_id)):
         if line.key in consumed_lines:
             continue
-        cat = categorizer.categorize(line.description)
-        if cat.account is None:
+        # ★行ごとの指定が最優先。店名だけで決まらない店の判断を、
+        #   店名のルールに上書きさせない。
+        account = line_accounts.get(line.key)
+        if account is None:
+            account = categorizer.categorize(line.description).account
+        if account is None:
+            result.undecided_lines.append((line.key, line.description, line.amount))
             result.issues.append(
                 BuildIssue(
                     "error",
                     line.key,
                     f"勘定科目が決まりません（{line.description}）。"
-                    "rules/categories.yaml に追加してください",
+                    "店名で決まる店なら rules/categories.yaml に、"
+                    "都度の判断が要る店なら rules/line_accounts.yaml に書いてください",
                 )
             )
             continue
+        cat = _Chosen(account)
         result.transactions.append(
             _expense_transaction(
                 when=line.date,

@@ -10,6 +10,7 @@ import argparse
 import contextlib
 import json
 import sys
+from datetime import date
 from pathlib import Path
 
 from shiwake import config as cfg
@@ -27,6 +28,7 @@ from shiwake.ledger import (
 )
 from shiwake.ledger.check import BeanCheckMissingError
 from shiwake.ledger.documents import load_month, load_skipped
+from shiwake.ledger.line_accounts import load_line_accounts, stub_for
 from shiwake.ledger.query import BeanQueryMissingError
 from shiwake.ledger.settlement import load_settlement_accounts
 from shiwake.rules_check import check_accounts
@@ -336,6 +338,7 @@ def cmd_build_ledger(args: argparse.Namespace) -> int:
         categorizer,
         receipt_accounts=receipt_accounts,
         settlement_accounts=load_settlement_accounts(root / "rules" / "accounts.yaml"),
+        line_accounts=load_line_accounts(root / "rules" / "line_accounts.yaml"),
     )
 
     for issue in result.issues:
@@ -350,6 +353,15 @@ def cmd_build_ledger(args: argparse.Namespace) -> int:
             "原本を見て金額を入れてください",
             file=sys.stderr,
         )
+
+    if result.undecided_lines:
+        # ★人にやってもらう作業は、貼るだけで済む形で出す。
+        #   1行ずつ書き写させると写し間違いが混ざる。
+        print(
+            "\n── rules/line_accounts.yaml に貼って、科目を書いてください ──\n",
+            file=sys.stderr,
+        )
+        print(stub_for(result.undecided_lines), file=sys.stderr)
 
     if result.errors:
         print(
@@ -367,6 +379,97 @@ def cmd_build_ledger(args: argparse.Namespace) -> int:
     out.write_text(result.render(header), encoding="utf-8")
     print(
         f"build-ledger: {len(result.transactions)} 件の仕訳を {out} に出力しました", file=sys.stderr
+    )
+    return 0
+
+
+def cmd_build_calendar(args: argparse.Namespace) -> int:
+    """元帳と設定 → 支払カレンダー（第4部 §4）。
+
+    ★予定を Beancount に書かない。元帳から**読んで**予定を組み立てる。
+      一方向にしておかないと、予定が実績に混ざる。
+    """
+    import subprocess
+    from datetime import datetime, timedelta
+
+    from shiwake.calendar import load_business_days
+    from shiwake.calendar.build import (
+        balance_alerts,
+        card_debit_events,
+        confirmed_balances,
+        forecast_balances,
+        match_settled,
+        recurring_events,
+    )
+    from shiwake.calendar.cards import load_cards
+    from shiwake.calendar.output import calendar_json
+    from shiwake.calendar.recurring import load_recurring
+
+    root = Path(".")
+    try:
+        postings = load_ledger_postings(Path(args.main))
+    except (BeanQueryMissingError, FileNotFoundError) as e:
+        print(f"ERROR   {e}", file=sys.stderr)
+        return 1
+
+    today = date.fromisoformat(args.today) if args.today else date.today()
+    horizon_end = today + timedelta(days=int(args.months) * 31)
+
+    business_days = load_business_days(root / "rules" / "business_days.yaml")
+    cards, problems = load_cards(root / "rules" / "accounts.yaml")
+    schedule = load_recurring(root / "schedule" / "recurring.yaml")
+    problems = list(problems) + list(schedule.problems)
+
+    events = card_debit_events(postings, cards, business_days, today, horizon_end)
+    events += recurring_events(schedule.items, business_days, today, horizon_end)
+    match_settled(events, postings)
+
+    # ★期首残高が入っていなければ、残高は予測しない。
+    #   起点が無いのに 0 から積むと、全部の数字が嘘になる。
+    opening_file = root / "ledger" / "manual" / "opening.beancount"
+    has_opening = any(
+        line.strip() and not line.strip().startswith(";")
+        for line in (
+            opening_file.read_text(encoding="utf-8").splitlines() if opening_file.is_file() else []
+        )
+    )
+    accounts = sorted({e.account for e in events if e.account})
+    forecasts = forecast_balances(
+        events, confirmed_balances(postings, today), accounts, today, has_opening
+    )
+    alerts = balance_alerts(forecasts)
+
+    commit = ""
+    with contextlib.suppress(subprocess.SubprocessError, FileNotFoundError):
+        commit = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=10,
+        ).stdout.strip()
+
+    payload = calendar_json(
+        events=events,
+        forecasts=forecasts,
+        alerts=alerts,
+        horizon=(today, horizon_end),
+        generated_at=datetime.now().astimezone().isoformat(timespec="seconds"),
+        commit=commit,
+        problems=problems,
+    )
+
+    out = Path(args.out) / "calendar.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    for problem in problems:
+        print(f"WARNING [calendar] {problem}", file=sys.stderr)
+    for alert in alerts:
+        print(f"ALERT   [calendar] {alert['date']} {alert['message']}", file=sys.stderr)
+    print(
+        f"build-calendar: 予定 {len(events)} 件を {out} に出力しました（{today} 〜 {horizon_end}）",
+        file=sys.stderr,
     )
     return 0
 
@@ -487,6 +590,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out", default="web/public/data", help="出力先")
     p.add_argument("--note", default=None, help="meta.json に添える注記")
     p.set_defaults(func=cmd_build_web_data)
+
+    p = sub.add_parser("build-calendar", help="支払カレンダー・資金繰りを作る（第4部 §4）")
+    p.add_argument("--main", default="ledger/main.beancount", help="元帳の入口")
+    p.add_argument("--out", default="web/public/data", help="出力先")
+    p.add_argument("--months", default=12, type=int, help="予定を出す期間（月）")
+    p.add_argument("--today", default=None, help="起点の日（既定は今日）")
+    p.set_defaults(func=cmd_build_calendar)
 
     p = sub.add_parser("check-rules", help="口座・カードのマスタの検査（第1部 D5）")
     p.add_argument("--accounts", default="rules/accounts.yaml", help="口座マスタ")
