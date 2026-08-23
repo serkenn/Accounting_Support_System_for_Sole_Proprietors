@@ -230,3 +230,31 @@ def test_unknown_key_is_an_error(tmp_path):
 
 def test_known_keys_pass(tmp_path):
     assert check_accounts(write(tmp_path, CARD)) == []
+
+
+def test_contactless_is_recorded_under_the_card_not_separately(tmp_path):
+    """★非接触決済の下4桁はカード本体と違う。
+
+    レシートには非接触側の下4桁が出るのに、請求はカード本体にまとまる。
+    別のカードとして登録すると、同じ支払いを2つの口座に振り分けてしまう。
+    """
+    body = CARD.replace(
+        "        verified_on: 2026-08-23",
+        "        verified_on: 2026-08-23\n"
+        "        contactless:\n"
+        "          - brand: iD\n"
+        '            card_last4: "5678"',
+    )
+    assert check_accounts(write(tmp_path, body)) == []
+
+
+def test_contactless_last4_is_validated(tmp_path):
+    body = CARD.replace(
+        "        verified_on: 2026-08-23",
+        "        verified_on: 2026-08-23\n"
+        "        contactless:\n"
+        "          - brand: iD\n"
+        '            card_last4: "12345678"',
+    )
+    issues = check_accounts(write(tmp_path, body))
+    assert any("下4桁のみ" in i.message for i in issues)

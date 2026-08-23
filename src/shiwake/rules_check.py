@@ -54,6 +54,8 @@ KNOWN_KEYS: dict[str, set[str]] = {
         "verified_on",
         "source_url",
         "source_note",
+        "contactless",
+        "note",
     },
     "debit_cards": {
         "id",
@@ -157,9 +159,26 @@ def check_accounts(path: Path) -> list[RuleIssue]:
 
             if kind == "cards":
                 issues.extend(_check_card_schedule(entry, target))
+                issues.extend(_check_contactless(entry, target))
             elif kind == "debit_cards":
                 issues.extend(_check_debit_card(entry, target))
 
+    return issues
+
+
+def _check_contactless(entry: dict, target: str) -> list[RuleIssue]:
+    """非接触決済（iD など）の下4桁は、カード本体と違う。
+
+    ★レシートには非接触側の下4桁が出るのに、請求はカード本体にまとまる。
+      別のカードとして登録すると、同じ支払いを2つの口座に振り分けてしまう。
+    """
+    issues: list[RuleIssue] = []
+    for item in entry.get("contactless") or []:
+        if not item.get("brand"):
+            issues.append(RuleIssue("error", target, "contactless に brand がありません"))
+        last4 = item.get("card_last4")
+        if last4 is not None and not _last4_ok(last4):
+            issues.append(RuleIssue("error", target, "contactless の card_last4 は下4桁のみ"))
     return issues
 
 
