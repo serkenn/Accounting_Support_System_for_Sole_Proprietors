@@ -258,3 +258,39 @@ def test_contactless_last4_is_validated(tmp_path):
     )
     issues = check_accounts(write(tmp_path, body))
     assert any("下4桁のみ" in i.message for i in issues)
+
+
+# ── トップレベルのタイポ（実際に起きた）─────────────────
+
+
+def test_unknown_top_level_key_is_rejected(tmp_path):
+    """★`debit_cards:` を `debit_dards:` と書いていた。
+
+    キーごと綴りを間違えると data.get() が None を返し、その節が
+    まるごと検査されない。**エラーも警告も出ないまま素通りする**ので、
+    「検査が通った」ことが何の保証にもならなくなる。
+
+    エントリの中のキーは既に弾いている。同じ理由で外側も弾く。
+    """
+    p = tmp_path / "accounts.yaml"
+    p.write_text(
+        "banks: []\ndebit_dards:\n  - id: debit_a\n    name: x\n",
+        encoding="utf-8",
+    )
+    issues = check_accounts(p)
+    assert any(i.severity == "error" and "debit_dards" in i.message for i in issues)
+
+
+def test_known_top_level_keys_are_accepted(tmp_path):
+    p = tmp_path / "accounts.yaml"
+    p.write_text(
+        "banks: []\ncards: []\ndebit_cards: []\nprepaid: []\ncash:\n  personal: A\n",
+        encoding="utf-8",
+    )
+    assert not any("知らない節" in i.message for i in check_accounts(p))
+
+
+def test_empty_accounts_file_is_fine(tmp_path):
+    p = tmp_path / "accounts.yaml"
+    p.write_text("", encoding="utf-8")
+    assert check_accounts(p) == []

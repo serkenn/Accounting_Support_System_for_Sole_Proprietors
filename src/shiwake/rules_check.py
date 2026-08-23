@@ -27,6 +27,9 @@ LAST4 = 4
 #:   タイポで設定が黙って無効になるのを防ぐ。実際に一括置換で
 #:   debit_day が別の名前に化け、締め日の設定が効かなくなった。
 #:   YAML は知らないキーを黙って受け取るので、ここで見るしかない。
+#: accounts.yaml のトップレベルに書いてよい節。
+KNOWN_SECTIONS = frozenset({"banks", "cards", "debit_cards", "prepaid", "cash"})
+
 KNOWN_KEYS: dict[str, set[str]] = {
     "banks": {
         "id",
@@ -100,6 +103,22 @@ def check_accounts(path: Path) -> list[RuleIssue]:
         return []
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     issues: list[RuleIssue] = []
+
+    # ★節の名前を綴り間違えると、その節がまるごと検査されない。
+    #   エラーも警告も出ないまま素通りするので、キーの中身より危ない。
+    #   実際 `debit_cards:` を `debit_dards:` と書いていて、
+    #   デビットカード4件が一度も検査されていなかった。
+    unknown_sections = sorted(set(data) - KNOWN_SECTIONS)
+    if unknown_sections:
+        issues.append(
+            RuleIssue(
+                "error",
+                str(path.name),
+                f"知らない節があります: {', '.join(unknown_sections)}。"
+                "綴りを確かめてください。節の名前を間違えると、"
+                "その節は検査されないまま黙って無視されます",
+            )
+        )
 
     groups = (
         ("banks", data.get("banks")),
