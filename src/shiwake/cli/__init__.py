@@ -28,6 +28,7 @@ from shiwake.ledger import (
 from shiwake.ledger.check import BeanCheckMissingError
 from shiwake.ledger.documents import load_month
 from shiwake.ledger.query import BeanQueryMissingError
+from shiwake.ledger.settlement import load_settlement_accounts
 from shiwake.rules_check import check_accounts
 from shiwake.safety import Denylist, Scanner
 from shiwake.safety import public_safe as ps
@@ -278,7 +279,7 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
     month = args.month
     root = Path(".")
     merchants = load_merchants(root / "rules" / "merchants.yaml")
-    receipts, card_lines = load_month(root / "documents", month)
+    receipts, card_lines, receipt_accounts = load_month(root / "documents", month)
     links_path = root / "links" / f"{month}.json"
     links = load_links(links_path)
 
@@ -324,10 +325,17 @@ def cmd_build_ledger(args: argparse.Namespace) -> int:
     root = Path(".")
     merchants = load_merchants(root / "rules" / "merchants.yaml")
     categorizer = load_categories(root / "rules" / "categories.yaml", merchants)
-    receipts, card_lines = load_month(root / "documents", month)
+    receipts, card_lines, receipt_accounts = load_month(root / "documents", month)
     links = load_links(root / "links" / f"{month}.json")
 
-    result = build_month(receipts, card_lines, links, categorizer)
+    result = build_month(
+        receipts,
+        card_lines,
+        links,
+        categorizer,
+        receipt_accounts=receipt_accounts,
+        settlement_accounts=load_settlement_accounts(root / "rules" / "accounts.yaml"),
+    )
 
     for issue in result.issues:
         print(issue.format(), file=sys.stderr)

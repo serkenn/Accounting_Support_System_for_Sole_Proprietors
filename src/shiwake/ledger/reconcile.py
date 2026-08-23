@@ -68,6 +68,8 @@ class Receipt:
     payment_method: str | None
     #: デビットの引落元を決めるのに要る。クレジットでは使わない。
     card_last4: str | None = None
+    #: コード決済・電子マネーの残高の名前（PayPay など）。
+    account_hint: str | None = None
 
 
 @dataclass(frozen=True)

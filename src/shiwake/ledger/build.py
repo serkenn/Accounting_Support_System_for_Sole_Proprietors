@@ -310,11 +310,13 @@ _IMMEDIATE_METHODS = frozenset({"debit_card", "qr_code", "ic_card"})
 
 def _settlement_account(receipt: Receipt, settlement_accounts: dict[str, str]) -> str | None:
     """即時払いの貸方を引く。分からなければ None（推測しない）。"""
-    if receipt.card_last4:
-        found = settlement_accounts.get(f"{receipt.payment_method}:{receipt.card_last4}")
-        if found:
-            return found
-    return settlement_accounts.get(str(receipt.payment_method))
+    method = str(receipt.payment_method)
+    for key in (receipt.card_last4, receipt.account_hint):
+        if key:
+            found = settlement_accounts.get(f"{method}:{key}")
+            if found:
+                return found
+    return settlement_accounts.get(method)
 
 
 def card_debit_transaction(
