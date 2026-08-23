@@ -8,25 +8,52 @@
       "pattern": "^doc_[0-9]{4}-[0-9]{2}-[0-9]{2}_[a-z0-9._-]+_[0-9a-f]{6,}$",
       "description": "doc_<日付>_<発行者スラグ>_<ハッシュ先頭>"
     },
-    "date": { "type": "string", "format": "date", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
-    "datetime": { "type": "string", "format": "date-time" },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "datetime": {
+      "type": "string",
+      "format": "date-time"
+    },
     "amount": {
       "description": "円。読み取れなかった場合は null にし、needs_review を立てる",
-      "type": ["integer", "null"]
+      "type": [
+        "integer",
+        "null"
+      ]
     },
     "last4": {
       "description": "下4桁のみ。これより長い値を書いてはいけない（第1部 §9.1）",
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "pattern": "^[0-9]{4}$"
     },
-    "taxRate": { "type": "number", "enum": [0, 0.08, 0.1] },
+    "taxRate": {
+      "type": "number",
+      "enum": [
+        0,
+        0.08,
+        0.1
+      ]
+    },
     "period": {
       "type": "object",
       "properties": {
-        "from": { "$ref": "#/$defs/date" },
-        "to": { "$ref": "#/$defs/date" }
+        "from": {
+          "$ref": "#/$defs/date"
+        },
+        "to": {
+          "$ref": "#/$defs/date"
+        }
       },
-      "required": ["from", "to"],
+      "required": [
+        "from",
+        "to"
+      ],
       "additionalProperties": false
     },
     "source": {
@@ -37,74 +64,174 @@
           "pattern": "^sha256:[0-9a-f]{64}$",
           "description": "原本のコンテンツアドレス（第8部 §2.2）"
         },
-        "original_ext": { "type": "string", "pattern": "^[a-z0-9]{1,8}$" },
-        "ingested_at": { "$ref": "#/$defs/datetime" },
+        "original_ext": {
+          "type": "string",
+          "pattern": "^[a-z0-9]{1,8}$"
+        },
+        "ingested_at": {
+          "$ref": "#/$defs/datetime"
+        },
         "extractor": {
           "type": "object",
           "properties": {
-            "skill": { "type": "string" },
-            "skill_version": { "type": "string" },
-            "model": { "type": "string" }
+            "skill": {
+              "type": "string"
+            },
+            "skill_version": {
+              "type": "string"
+            },
+            "model": {
+              "type": "string"
+            }
           },
-          "required": ["skill", "skill_version", "model"],
+          "required": [
+            "skill",
+            "skill_version",
+            "model"
+          ],
           "additionalProperties": false
+        },
+        "supporting_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "description": "同じ取引の裏づけになる別の原本（クレジット売上票など）。別 document にすると二重計上になるので、ここで参照する。"
         }
       },
-      "required": ["original_ref", "original_ext", "ingested_at", "extractor"],
+      "required": [
+        "original_ref",
+        "original_ext",
+        "ingested_at",
+        "extractor"
+      ],
       "additionalProperties": false
     },
     "taxBreakdownEntry": {
       "type": "object",
       "properties": {
-        "rate": { "$ref": "#/$defs/taxRate" },
-        "taxable_amount": { "$ref": "#/$defs/amount" },
-        "tax_amount": { "$ref": "#/$defs/amount" }
+        "rate": {
+          "$ref": "#/$defs/taxRate"
+        },
+        "taxable_amount": {
+          "$ref": "#/$defs/amount"
+        },
+        "tax_amount": {
+          "$ref": "#/$defs/amount"
+        }
       },
-      "required": ["rate", "taxable_amount", "tax_amount"],
+      "required": [
+        "rate",
+        "taxable_amount",
+        "tax_amount"
+      ],
       "additionalProperties": false
     },
     "envelope": {
       "description": "全 document 型に共通する枠",
       "type": "object",
       "properties": {
-        "schema_version": { "type": "integer", "const": 1 },
-        "doc_id": { "$ref": "#/$defs/docId" },
+        "schema_version": {
+          "type": "integer",
+          "const": 1
+        },
+        "doc_id": {
+          "$ref": "#/$defs/docId"
+        },
         "type": {
           "type": "string",
           "enum": [
-            "receipt", "card_statement", "payslip", "bank_statement",
-            "utility_bill", "invoice_issued", "asset_purchase",
-            "loan_contract", "withholding_slip", "payment_statement"
+            "receipt",
+            "card_statement",
+            "payslip",
+            "bank_statement",
+            "utility_bill",
+            "invoice_issued",
+            "asset_purchase",
+            "loan_contract",
+            "withholding_slip",
+            "payment_statement"
           ]
         },
-        "source": { "$ref": "#/$defs/source" },
-
+        "source": {
+          "$ref": "#/$defs/source"
+        },
         "origin": {
           "description": "紙を撮影したものか、電子で受け取ったものか（第9部 §9）。扱いが違う",
           "type": "string",
-          "enum": ["paper", "electronic"]
+          "enum": [
+            "paper",
+            "electronic"
+          ]
         },
         "paper_retained": {
           "description": "origin: paper のとき、紙を保管しているか",
-          "type": ["boolean", "null"]
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "scanner_storage": {
           "description": "スキャナ保存の要件を満たす運用をしているか（第11部）",
-          "type": ["boolean", "object", "null"]
+          "type": [
+            "boolean",
+            "object",
+            "null"
+          ]
         },
-
-        "page_count": { "type": ["integer", "null"], "minimum": 1 },
-        "derivative_error": { "type": ["string", "null"] },
-
-        "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
-        "needs_review": { "type": "boolean" },
-        "review_reason": { "type": ["string", "null"] },
-        "corrected_by": { "type": ["string", "null"], "enum": ["human", null] },
-        "notes": { "type": "string" }
+        "page_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "derivative_error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "confidence": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "needs_review": {
+          "type": "boolean"
+        },
+        "review_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "corrected_by": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "human",
+            null
+          ]
+        },
+        "notes": {
+          "type": "string"
+        }
       },
       "required": [
-        "schema_version", "doc_id", "type", "source",
-        "origin", "needs_review", "review_reason"
+        "schema_version",
+        "doc_id",
+        "type",
+        "source",
+        "origin",
+        "needs_review",
+        "review_reason"
       ]
     }
   }

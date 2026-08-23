@@ -112,6 +112,17 @@ def _check_business_rules(doc: dict, path: str) -> list[Issue]:
 
     doc_type = doc.get("type")
 
+    # ── 1つの取引を2回数えない ──────────────────────────
+    source = doc.get("source") or {}
+    supporting = source.get("supporting_refs") or []
+    if source.get("original_ref") in supporting:
+        err(
+            "supporting_ref_duplicates_original",
+            "原本そのものが supporting_refs にも入っています。同じ証憑を2回数えることになります",
+        )
+    if len(supporting) != len(set(supporting)):
+        err("supporting_ref_duplicated", "supporting_refs に同じ原本が2回入っています")
+
     # ── 推測で埋めない（第1部 §9.1 の3・4）──────────────
     if doc.get("needs_review") and not doc.get("review_reason"):
         err("missing_review_reason", "needs_review を立てたら理由を書いてください")

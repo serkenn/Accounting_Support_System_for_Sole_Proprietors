@@ -183,3 +183,67 @@ def test_rendered_output_is_stable():
 def test_amounts_are_rendered_with_separators():
     r = build_month([], [line(amount=1234567)], Links("2026-07"), CAT)
     assert "1,234,567 JPY" in r.transactions[0].render()
+
+
+# ── 即時払いの支払手段（デビット・コード決済・電子マネー）──
+#
+# ★これらは「あとで請求が来る」ものではない。負債を立ててはいけない。
+#   カードと同じ扱いにすると、消えない負債が積み上がり、
+#   **貸借は合ったまま**貸借対照表だけが間違う。検算では気づけない。
+
+BANK_G = "Assets:Personal:Bank:G"
+PAYPAY = "Assets:Personal:Prepaid:PayPay"
+SETTLE = {"debit_card:7788": BANK_G, "qr_code": PAYPAY}
+
+
+def _only(result):
+    assert len(result.transactions) == 1, result.issues
+    return result.transactions[0]
+
+
+def test_debit_card_credits_the_bank_account_not_a_liability():
+    r = receipt(method="debit_card")
+    r = Receipt(r.doc_id, r.date, r.issuer, r.total, "debit_card", "7788")
+    out = build_month([r], [], Links({}), CAT, settlement_accounts=SETTLE)
+    accounts = {p.account for p in _only(out).postings}
+    assert BANK_G in accounts
+    assert not any(a.startswith("Liabilities:") for a in accounts)
+
+
+def test_debit_card_payment_is_not_pending():
+    """★デビットは既に決済済み。突合待ちの印を付けない。"""
+    r = Receipt("doc_r1", date(2026, 7, 14), "サンプルストア", 1234, "debit_card", "7788")
+    out = build_month([r], [], Links({}), CAT, settlement_accounts=SETTLE)
+    assert _only(out).tags == []
+
+
+def test_qr_code_credits_the_wallet():
+    r = Receipt("doc_r1", date(2026, 7, 14), "サンプルストア", 1234, "qr_code", None)
+    out = build_month([r], [], Links({}), CAT, settlement_accounts=SETTLE)
+    assert PAYPAY in {p.account for p in _only(out).postings}
+
+
+def test_unknown_debit_card_is_an_error_not_a_guess():
+    """★引落元が分からないまま仕訳を作らない。
+
+    どこかの口座に落とすと、その口座の残高が黙って狂う。
+    """
+    r = Receipt("doc_r1", date(2026, 7, 14), "サンプルストア", 1234, "debit_card", "0000")
+    out = build_month([r], [], Links({}), CAT, settlement_accounts=SETTLE)
+    assert out.transactions == []
+    assert any(i.severity == "error" for i in out.issues)
+
+
+def test_unknown_wallet_is_an_error_not_a_guess():
+    r = Receipt("doc_r1", date(2026, 7, 14), "サンプルストア", 1234, "qr_code", None)
+    out = build_month([r], [], Links({}), CAT, settlement_accounts={})
+    assert out.transactions == []
+    assert any(i.severity == "error" for i in out.issues)
+
+
+def test_credit_card_still_becomes_a_pending_liability():
+    """既存の扱いを壊していないこと。"""
+    out = build_month([receipt()], [], Links({}), CAT, settlement_accounts=SETTLE)
+    tx = _only(out)
+    assert any(p.account.startswith("Liabilities:") for p in tx.postings)
+    assert tx.tags != []

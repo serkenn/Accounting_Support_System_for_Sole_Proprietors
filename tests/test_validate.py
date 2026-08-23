@@ -349,3 +349,59 @@ def test_unknown_utility_kind_is_rejected():
 
 def test_utility_bill_rejects_unknown_fields():
     assert "schema" in rules(v.validate_document(utility(surprise=1)))
+
+
+# ── 支払手段（実データに合わせる）────────────────────────
+
+
+def test_qr_code_payment_is_accepted():
+    """★PayPay 等のコード決済は cash でも credit_card でもない。
+
+    other に丸めると突合先が分からなくなる。コード決済の残高は
+    銀行からのチャージで動くので、突合先は銀行明細になる。
+    """
+    assert v.validate_document(receipt(payment={"method": "qr_code"})) == []
+
+
+def test_debit_card_payment_is_accepted():
+    """★デビットは credit_card と突合先が違う。
+
+    クレジットは「領収書 ↔ カード明細行」、デビットは
+    「領収書 ↔ 銀行明細行」。同じ扱いにすると突合できない。
+    """
+    doc = receipt(payment={"method": "debit_card", "card_last4": "1234"})
+    assert v.validate_document(doc) == []
+
+
+def test_unknown_payment_method_is_still_rejected():
+    assert "schema" in rules(v.validate_document(receipt(payment={"method": "crypto"})))
+
+
+# ── 1つの取引が複数の原本に分かれる ─────────────────────
+
+
+def test_supporting_originals_are_accepted():
+    """★タクシーの領収書とクレジット売上票のように、
+    1つの取引の証憑が2枚に分かれることがある。
+
+    別々の document にすると二重計上になる。1つにまとめ、
+    もう一方は裏づけとして参照する。
+    """
+    doc = receipt()
+    doc["source"]["supporting_refs"] = ["sha256:" + "cd" * 32]
+    assert v.validate_document(doc) == []
+
+
+def test_supporting_ref_must_be_a_content_address():
+    doc = receipt()
+    doc["source"]["supporting_refs"] = ["Epson_20260823200930(9).jpg"]
+    assert "schema" in rules(v.validate_document(doc))
+
+
+def test_supporting_ref_must_not_repeat_the_original():
+    """★同じ原本を2回数えない。"""
+    doc = receipt()
+    doc["source"]["supporting_refs"] = [SHA]
+    assert any(
+        i.rule == "supporting_ref_duplicates_original" for i in errors(v.validate_document(doc))
+    )

@@ -164,13 +164,17 @@ def build_month(
     receipt_accounts: dict[str, str] | None = None,
     cash_account: str = "Assets:Personal:Cash",
     receipt_payees: dict[str, str] | None = None,
+    settlement_accounts: dict[str, str] | None = None,
 ) -> BuildResult:
     """1か月分の仕訳を組み立てる。
 
     receipt_accounts: doc_id → 費用の勘定科目（領収書の内訳から決めたもの）
+    settlement_accounts: 即時払いの貸方。`"debit_card:0000"` / `"qr_code"` /
+        `"ic_card"` のような鍵から勘定科目を引く。
     """
     result = BuildResult()
     receipt_accounts = receipt_accounts or {}
+    settlement_accounts = settlement_accounts or {}
     receipt_payees = receipt_payees or {}
     by_doc = {r.doc_id: r for r in receipts}
     by_key = {line.key: line for line in card_lines}
@@ -259,6 +263,23 @@ def build_month(
 
         if receipt.payment_method == "cash":
             credit, meta, tags = cash_account, {"doc_id": receipt.doc_id}, []
+        elif receipt.payment_method in _IMMEDIATE_METHODS:
+            # ★即時払い。あとから請求は来ないので負債を立てない。
+            #   引落元が分からないまま適当な口座に落とすと、
+            #   その口座の残高が黙って狂う。分からなければ止める。
+            credit = _settlement_account(receipt, settlement_accounts)
+            if credit is None:
+                result.issues.append(
+                    BuildIssue(
+                        "error",
+                        receipt.doc_id,
+                        f"{receipt.payment_method} の引落元が決まりません"
+                        f"（下4桁 {receipt.card_last4 or 'なし'}）。"
+                        "rules/accounts.yaml に登録してください",
+                    )
+                )
+                continue
+            meta, tags = {"doc_id": receipt.doc_id}, []
         else:
             # ★カード払いだが明細が未取込。届いたらリンクされ pending が外れる
             credit = (
@@ -281,6 +302,19 @@ def build_month(
         )
 
     return result
+
+
+#: 即時に決済され、負債を残さない支払手段。
+_IMMEDIATE_METHODS = frozenset({"debit_card", "qr_code", "ic_card"})
+
+
+def _settlement_account(receipt: Receipt, settlement_accounts: dict[str, str]) -> str | None:
+    """即時払いの貸方を引く。分からなければ None（推測しない）。"""
+    if receipt.card_last4:
+        found = settlement_accounts.get(f"{receipt.payment_method}:{receipt.card_last4}")
+        if found:
+            return found
+    return settlement_accounts.get(str(receipt.payment_method))
 
 
 def card_debit_transaction(

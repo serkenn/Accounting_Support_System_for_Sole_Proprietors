@@ -66,6 +66,8 @@ class Receipt:
     issuer: str
     total: int
     payment_method: str | None
+    #: デビットの引落元を決めるのに要る。クレジットでは使わない。
+    card_last4: str | None = None
 
 
 @dataclass(frozen=True)

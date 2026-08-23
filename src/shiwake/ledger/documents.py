@@ -36,6 +36,7 @@ def load_month(documents: Path, month: str) -> tuple[list[Receipt], list[CardLin
                     issuer=(doc.get("issuer") or {}).get("name") or "",
                     total=doc.get("total") or 0,
                     payment_method=(doc.get("payment") or {}).get("method"),
+                    card_last4=(doc.get("payment") or {}).get("card_last4"),
                 )
             )
         elif doc.get("type") == "card_statement":

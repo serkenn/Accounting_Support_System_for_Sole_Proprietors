@@ -78,6 +78,8 @@
           "enum": [
             "cash",
             "credit_card",
+            "debit_card",
+            "qr_code",
             "ic_card",
             "bank_transfer",
             "direct_debit",
