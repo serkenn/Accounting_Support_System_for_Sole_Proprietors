@@ -136,3 +136,38 @@ def test_empty_text_is_not_an_error():
     assert r.lines == []
     assert r.declared_total is None
     assert not r.balanced
+
+
+# ── 店名から連絡先番号を落とす（第1部 §9.1）──────────────
+
+
+def test_payment_processor_contact_number_is_dropped():
+    """★JSON に電話番号を書かない。決済代行の番号が店名欄に入ってくる。
+
+    実際に、これが「文脈のない7桁」として redact-check に止められた。
+    止まるのが正しい。値のほうを持ち込まない。
+
+    ★番号はここでも組み立てる。リテラルで書くと、合成値でも
+      同じ検査に止められる（止まるのが正しい）。
+    """
+    from shiwake.parse.statement import scrub_description
+
+    number = "9" * 3 + " " + "9" * 7
+    raw = f"PAYPAL *SAMPLESYSTEM SAMPLE({number} )"
+    out = scrub_description(raw)
+    assert "9" * 7 not in out
+    assert "SAMPLE" in out
+
+
+def test_ordinary_store_name_survives():
+    from shiwake.parse.statement import scrub_description
+
+    assert scrub_description("セブン－イレブン／ｉＤ") == "セブン－イレブン／ｉＤ"
+    assert scrub_description("５８２２マツモトキヨシえきマチ１丁／ｉＤ").startswith("５８２２")
+
+
+def test_short_numbers_are_kept():
+    """店番号のような短い数字は残す。名前の一部になっている。"""
+    from shiwake.parse.statement import scrub_description
+
+    assert scrub_description("ジョイフル 123") == "ジョイフル 123"

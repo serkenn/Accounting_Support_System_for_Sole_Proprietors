@@ -48,6 +48,27 @@ _TOTAL = re.compile(r"(?:お支払い合計額|ご利用明細合計|お支払�
 _NOT_AN_ITEM = re.compile(r"発行|お支払い日|現在判明分")
 
 
+#: 決済代行の連絡先番号。明細の店名欄にそのまま入ってくる。
+#:
+#: ★JSON に電話番号を書かない（第1部 §9.1）。使い道も無い。
+#:   PDF の折り返しで途中に空白が入ることがあるので、それも吸収する。
+_CONTACT_NUMBER = re.compile(r"[（(]\s*[\d\s]{7,}\s*[）)]")
+
+#: 括弧の外に裸で並ぶ長い数字。上と同じ理由で落とす。
+_BARE_LONG_DIGITS = re.compile(r"(?<![\d])[\d]{3}\s?[\d]{4,}(?![\d])")
+
+
+def scrub_description(text: str) -> str:
+    """店名から連絡先番号を落とす。
+
+    ★店名そのものは変えない。原本の PDF にも手を触れない。
+      JSON に持ち込むものだけを削る。
+    """
+    out = _CONTACT_NUMBER.sub("", text)
+    out = _BARE_LONG_DIGITS.sub("", out)
+    return " ".join(out.split())
+
+
 def _yen(text: str) -> int:
     return int(text.replace(",", "").replace("−", "-"))
 
