@@ -43,6 +43,7 @@ def load_month(documents: Path, month: str) -> tuple[list[Receipt], list[CardLin
     receipts: list[Receipt] = []
     card_lines: list[CardLine] = []
     receipt_accounts: dict[str, str] = {}
+    skipped: list[str] = []
     if not documents.is_dir():
         return receipts, card_lines, receipt_accounts
 
@@ -52,12 +53,17 @@ def load_month(documents: Path, month: str) -> tuple[list[Receipt], list[CardLin
             issued = doc.get("issued_at")
             if not issued or not issued.startswith(month):
                 continue
+            if doc.get("total") is None:
+                # ★読めなかった金額を 0 として入れない。貸借は合うので
+                #   検算も通り、費用が黙って過小になる。
+                skipped.append(doc["doc_id"])
+                continue
             receipts.append(
                 Receipt(
                     doc_id=doc["doc_id"],
                     date=_date(issued),
                     issuer=(doc.get("issuer") or {}).get("name") or "",
-                    total=doc.get("total") or 0,
+                    total=doc["total"],
                     payment_method=(doc.get("payment") or {}).get("method"),
                     card_last4=(doc.get("payment") or {}).get("card_last4"),
                     account_hint=(doc.get("payment") or {}).get("account_hint"),
@@ -82,3 +88,21 @@ def load_month(documents: Path, month: str) -> tuple[list[Receipt], list[CardLin
                     )
                 )
     return receipts, card_lines, receipt_accounts
+
+
+def load_skipped(documents: Path, month: str) -> list[str]:
+    """金額が読めず、元帳に入れなかった領収書の doc_id。
+
+    ★黙って消すと、抜けていることに誰も気づかない。
+    """
+    out: list[str] = []
+    if not documents.is_dir():
+        return out
+    for path in sorted(documents.rglob("*.json")):
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        if doc.get("type") != "receipt" or doc.get("total") is not None:
+            continue
+        issued = doc.get("issued_at")
+        if issued and issued.startswith(month):
+            out.append(doc["doc_id"])
+    return out

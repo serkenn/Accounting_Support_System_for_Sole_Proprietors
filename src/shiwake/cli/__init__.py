@@ -26,7 +26,7 @@ from shiwake.ledger import (
     save_links,
 )
 from shiwake.ledger.check import BeanCheckMissingError
-from shiwake.ledger.documents import load_month
+from shiwake.ledger.documents import load_month, load_skipped
 from shiwake.ledger.query import BeanQueryMissingError
 from shiwake.ledger.settlement import load_settlement_accounts
 from shiwake.rules_check import check_accounts
@@ -339,6 +339,16 @@ def cmd_build_ledger(args: argparse.Namespace) -> int:
 
     for issue in result.issues:
         print(issue.format(), file=sys.stderr)
+
+    # ★金額が読めず元帳に入れなかったものを黙って落とさない。
+    #   落とすと、費用が過小のまま誰も気づかない。
+    skipped = load_skipped(root / "documents", month)
+    for doc_id in skipped:
+        print(
+            f"WARNING  [build] {doc_id}: 合計が読み取れていないため元帳に入れていません。"
+            "原本を見て金額を入れてください",
+            file=sys.stderr,
+        )
 
     if result.errors:
         print(

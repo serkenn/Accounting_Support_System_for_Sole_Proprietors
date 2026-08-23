@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from shiwake.ledger.documents import load_month
+from shiwake.ledger.documents import load_month, load_skipped
 
 # ── 領収書ごとの科目指定（lines[].account）─────────────
 #
@@ -34,7 +34,7 @@ def _receipt_doc(lines, **over):
         "issuer": {"name": "サンプル運輸"},
         "issued_at": "2026-04-25T10:02:00+09:00",
         "currency": "JPY",
-        "total": sum(line["amount"] for line in lines),
+        "total": sum(line["amount"] or 0 for line in lines),
         "tax_breakdown": [],
         "payment": {"method": "cash"},
         "lines": lines,
@@ -88,3 +88,41 @@ def test_mixed_line_accounts_are_reported_not_silently_merged(tmp_path):
     )
     with pytest.raises(ValueError, match="doc_2026-04-25_x_a1b2c3"):
         load_month(root, "2026-04")
+
+
+# ── 金額が読めなかった領収書 ────────────────────────────
+
+
+def test_receipt_with_no_total_is_not_loaded_as_zero(tmp_path):
+    """★合計が読めなかった領収書を 0円 として元帳に入れない。
+
+    `total or 0` になっていて、null が 0 になっていた。
+    貸借は合うので bean-check も通り、**費用が黙って過小になる**。
+    読めなかったものは元帳に入れず、その旨を報せる。
+    """
+    doc = _receipt_doc([{"description": "不明", "amount": None}])
+    doc["total"] = None
+    doc["needs_review"] = True
+    doc["review_reason"] = "下端が写っておらず合計が読めない"
+    root = _write(tmp_path, doc)
+    receipts, _lines, _accounts = load_month(root, "2026-04")
+    assert receipts == []
+
+
+def test_unreadable_receipt_is_reported(tmp_path):
+    """黙って消えるのも困る。除いたことが分かるようにする。"""
+    doc = _receipt_doc([{"description": "不明", "amount": None}])
+    doc["total"] = None
+    doc["needs_review"] = True
+    doc["review_reason"] = "下端が写っておらず合計が読めない"
+    root = _write(tmp_path, doc)
+    assert load_skipped(root, "2026-04") == ["doc_2026-04-25_x_a1b2c3"]
+
+
+def test_a_genuinely_zero_yen_receipt_is_kept(tmp_path):
+    """0円の領収書は実在する（全額値引きなど）。null と混同しない。"""
+    doc = _receipt_doc([{"description": "値引き後", "amount": 0}])
+    root = _write(tmp_path, doc)
+    receipts, _lines, _accounts = load_month(root, "2026-04")
+    assert len(receipts) == 1
+    assert receipts[0].total == 0
