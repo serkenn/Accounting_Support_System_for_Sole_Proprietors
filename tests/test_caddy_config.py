@@ -137,3 +137,84 @@ def test_compose_template_has_no_real_values():
     text = (ROOT / "templates" / "deploy" / "compose.yaml.template").read_text(encoding="utf-8")
     assert "SYNTHETIC" in text
     assert not re.search(r"[a-z0-9-]+\.(tech|com|net)\b", text)
+
+
+# ── 配備の境界（第9部 §8）──────────────────────────────
+#
+# ★compose の書き方がそのままセキュリティ境界になる。
+#   「とりあえず動かす」ために緩めた設定は、そのまま本番に残る。
+#   緩んだら気づけるように、ここで固定しておく。
+
+import yaml  # noqa: E402
+
+TEMPLATE = ROOT / "templates" / "deploy" / "compose.yaml.template"
+
+
+def _compose() -> dict:
+    # ${VAR:?...} は YAML としては素通りするので、そのまま読める
+    return yaml.safe_load(TEMPLATE.read_text(encoding="utf-8"))
+
+
+def test_ingest_mounts_only_the_inbox():
+    """★S10。元帳も原本も渡さない。"""
+    volumes = _compose()["services"]["ledger-ingest"]["volumes"]
+    assert volumes == ["/srv/inbox:/srv/inbox"]
+
+
+def test_web_never_gets_write_access_to_files():
+    """★原本に書ける経路を作らない。"""
+    volumes = _compose()["services"]["ledger-web"]["volumes"]
+    assert all(v.endswith(":ro") for v in volumes), volumes
+    assert any("/srv/files" in v for v in volumes)
+
+
+def test_ingest_does_not_see_the_ledger():
+    text = TEMPLATE.read_text(encoding="utf-8")
+    assert "/srv/ledger" not in yaml.dump(_compose()["services"]["ledger-ingest"])
+    assert "/srv/files" not in yaml.dump(_compose()["services"]["ledger-ingest"])
+    assert "/srv/ledger" not in yaml.dump(_compose()["services"]["ledger-web"])
+    del text
+
+
+def test_access_settings_have_no_default():
+    """★認証を空のまま起動できないこと（S13）。
+
+    `${VAR:?...}` は未設定なら compose がその場で止まる。
+    `${VAR:-}` にすると空文字で起動してしまう。
+    """
+    env = _compose()["services"]["ledger-ingest"]["environment"]
+    for key in ("SHIWAKE_ACCESS_TEAM_DOMAIN", "SHIWAKE_ACCESS_AUD"):
+        assert ":?" in str(env[key]), key
+
+
+def test_tunnel_token_has_no_default_and_is_not_written_down():
+    service = _compose()["services"]["cloudflared"]
+    assert ":?" in str(service["environment"]["TUNNEL_TOKEN"])
+    assert "eyJ" not in TEMPLATE.read_text(encoding="utf-8")
+
+
+def test_no_service_publishes_a_port_to_the_host():
+    """★外に出す経路は cloudflared だけ。ports を開けない。"""
+    for name, service in _compose()["services"].items():
+        assert "ports" not in service, f"{name} がホストにポートを出しています"
+
+
+def test_containers_are_non_root_and_read_only():
+    """★S16。"""
+    services = _compose()["services"]
+    for name in ("ledger-ingest", "ledger-web"):
+        assert services[name]["read_only"] is True, name
+    assert services["ledger-ingest"]["user"].startswith("10001")
+
+
+def test_caddy_forwards_api_to_the_ingest_service():
+    text = (ROOT / "docker" / "Caddyfile").read_text(encoding="utf-8")
+    assert "handle /api/*" in text
+    assert "reverse_proxy ledger-ingest:8081" in text
+
+
+def test_caddy_does_not_decide_authentication():
+    """★認証の判断を2か所に分けない。片方を緩めても気づけなくなる。"""
+    text = (ROOT / "docker" / "Caddyfile").read_text(encoding="utf-8")
+    assert "basicauth" not in text
+    assert "forward_auth" not in text

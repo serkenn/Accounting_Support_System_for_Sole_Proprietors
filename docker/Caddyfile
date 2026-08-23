@@ -30,6 +30,20 @@
 		file_server
 	}
 
+	# ── 投入 API（第9部 §4.2）────────────────────
+	#
+	# ★ここだけが書き込み口。認証は ingest 側で JWT を検証する。
+	#   Caddy は Cf-Access-Jwt-Assertion をそのまま渡すだけで、
+	#   **ここで認証を判断しない**。判断を2か所に分けると、
+	#   片方を緩めたときにもう片方が気づけない。
+	handle /api/* {
+		header -Server
+		# 内側の口。ホストには出さない（compose で ports を開けない）
+		reverse_proxy ledger-ingest:8081 {
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
 	# ── 静的 SPA ──────────────────────────────────
 	handle {
 		root * /srv/web

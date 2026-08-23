@@ -1,29 +1,74 @@
-# 配信の構成（テンプレート）。
+# 配信構成のひな形（第9部 §6）。SYNTHETIC — 実在の値は入っていません。
 #
-# SYNTHETIC — これは雛形です。実際の構成はデータリポジトリ側に置きます。
+# ★ホスト名・トークン・チームドメインはすべて環境変数から読みます。
+#   ここに実際の値を書くと、公開リポジトリに自宅の構成が出ます。
 #
-# ★ファイル名が compose.yaml だと、公開側の禁止ファイル検査が止めます。
-#   自宅の構成が漏れる経路なので、その名前を公開側に置かせない作りです。
-#   使うときは、データリポジトリ側へ compose.yaml として写してください。
-# ★ここにドメイン・内部IP・ホスト名・トークンを書かないでください（第13部 §7）。
+# ★これはテンプレートです。非公開リポジトリに compose.yaml として
+#   コピーし、そちらで運用します。公開側には実構成を置きません。
+#
+# ★マウントの範囲がそのままセキュリティ境界です（§8）。ここを緩めないこと。
+#   - ledger-web    は /srv/files を **読むだけ**
+#   - ledger-ingest は /srv/inbox **だけ**。元帳も原本も渡さない（S10）
+#
+# 前提の配置（§3.1）:
+#   /srv/ledger  Git 作業ツリー。Claude Code はコンテナの外で、ここで動く
+#   /srv/inbox   未処理の投入（Git 管理外）
+#   /srv/files   originals + derived
+#   /srv/web     生成した SPA + data
+
+name: ledger
 
 services:
-  web:
+  # ── 静的 SPA と、原本・派生の配信 ──────────────────────
+  ledger-web:
     build:
-      context: .
+      context: ${SHIWAKE_SRC:-/srv/shiwake}
       dockerfile: docker/Dockerfile.web
     volumes:
-      # 生成した静的データ
-      - ./web-data:/srv/web/data:ro
-      # ★原本と派生は read-only でマウントする。
-      #   Web から書ける経路を作らない（第9部 §6）
-      - ./files:/srv/files:ro
+      # ★read-only。Web から原本に書ける経路を作らない
+      - /srv/files:/srv/files:ro
+      - /srv/web/data:/srv/web/data:ro
     read_only: true
-    tmpfs:
-      - /tmp
-      - /config
-      - /data
-    security_opt:
-      - no-new-privileges:true
-    ports:
-      - "127.0.0.1:8080:8080"
+    tmpfs: [/tmp, /config, /data]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    # ★ホストにポートを出さない。外からは cloudflared 経由だけ
+    expose: ["8080"]
+    restart: unless-stopped
+    depends_on: [ledger-ingest]
+
+  # ── 投入 API（第9部 §4）──────────────────────────────
+  ledger-ingest:
+    build:
+      context: ${SHIWAKE_SRC:-/srv/shiwake}
+      dockerfile: docker/Dockerfile.ingest
+    volumes:
+      # ★ここだけ書き込み可。これ以外は渡さない（S10）
+      - /srv/inbox:/srv/inbox
+    environment:
+      SHIWAKE_INBOX: /srv/inbox
+      SHIWAKE_MAX_BYTES: "26214400"           # 25MB
+      # ★認証。空だと **起動に失敗します**（S13）
+      SHIWAKE_ACCESS_TEAM_DOMAIN: ${SHIWAKE_ACCESS_TEAM_DOMAIN:?Cloudflare Access のチームドメインが必要です}
+      SHIWAKE_ACCESS_AUD: ${SHIWAKE_ACCESS_AUD:?Cloudflare Access の Application Audience が必要です}
+    read_only: true
+    tmpfs: [/tmp]
+    user: "10001:10001"
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    expose: ["8081"]
+    restart: unless-stopped
+
+  # ── Cloudflare Tunnel ────────────────────────────────
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    environment:
+      # ★トークンは .env から読みます。**このファイルに書かないこと**
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?Cloudflare Tunnel のトークンが必要です}
+    read_only: true
+    user: "65532:65532"
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    restart: unless-stopped
+    depends_on: [ledger-web]

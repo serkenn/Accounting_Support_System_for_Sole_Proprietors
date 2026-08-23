@@ -1,0 +1,30 @@
+# 投入 API（第9部 §4.3 / S16）。
+#
+# ★このコンテナがマウントするのは /srv/inbox だけ。
+#   元帳（/srv/ledger）も原本（/srv/files）も渡さない。
+#   マウントの範囲がそのままセキュリティ境界である（§8 S10）。
+
+FROM python:3.12-slim AS build
+WORKDIR /app
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# 依存だけを先に入れて、層を使い回せるようにする
+COPY pyproject.toml uv.lock README.md LICENSE ./
+COPY src/ ./src/
+RUN uv sync --frozen --no-dev --extra ingest
+
+FROM python:3.12-slim
+# non-root で動かす（S16）。uid は compose 側と揃える
+RUN useradd --uid 10001 --create-home --shell /usr/sbin/nologin app
+WORKDIR /app
+COPY --from=build /app/.venv /app/.venv
+COPY --from=build /app/src /app/src
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+USER 10001:10001
+EXPOSE 8081
+
+# ★認証の設定が無ければ create_app が例外を投げ、ここで起動に失敗する。
+#   認証なしで上がってしまう状態を作らない（S13）。
+CMD ["python", "-m", "shiwake.ingest.app"]
