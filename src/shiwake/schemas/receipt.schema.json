@@ -2,43 +2,102 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://shiwake.invalid/schemas/receipt.schema.json",
   "title": "領収書",
-  "allOf": [{ "$ref": "common.schema.json#/$defs/envelope" }],
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/envelope"
+    }
+  ],
   "type": "object",
   "properties": {
-    "type": { "const": "receipt" },
+    "type": {
+      "const": "receipt"
+    },
     "issuer": {
       "type": "object",
       "properties": {
-        "name": { "type": ["string", "null"] },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "invoice_reg_no": {
           "description": "適格請求書発行事業者登録番号。公表制度の対象なので機密ではない",
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "pattern": "^T[0-9]{13}$"
         },
-        "invoice_reg_verified": { "type": ["boolean", "null"] },
-        "invoice_reg_name": { "type": ["string", "null"] }
+        "invoice_reg_verified": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "invoice_reg_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       },
-      "required": ["name"],
+      "required": [
+        "name"
+      ],
       "additionalProperties": false
     },
-    "issued_at": { "type": ["string", "null"] },
-    "currency": { "type": "string", "const": "JPY" },
-    "total": { "$ref": "common.schema.json#/$defs/amount" },
+    "issued_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "currency": {
+      "description": "証憑に書かれている通貨。元帳は JPY だが、証憑が外貨のことがある",
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "total": {
+      "$ref": "common.schema.json#/$defs/amount"
+    },
     "tax_breakdown": {
       "type": "array",
-      "items": { "$ref": "common.schema.json#/$defs/taxBreakdownEntry" }
+      "items": {
+        "$ref": "common.schema.json#/$defs/taxBreakdownEntry"
+      }
     },
     "payment": {
       "type": "object",
       "properties": {
         "method": {
-          "type": ["string", "null"],
-          "enum": ["cash", "credit_card", "ic_card", "bank_transfer", "direct_debit", "other", null]
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "cash",
+            "credit_card",
+            "ic_card",
+            "bank_transfer",
+            "direct_debit",
+            "other",
+            null
+          ]
         },
-        "account_hint": { "type": ["string", "null"] },
-        "card_last4": { "$ref": "common.schema.json#/$defs/last4" }
+        "account_hint": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "card_last4": {
+          "$ref": "common.schema.json#/$defs/last4"
+        }
       },
-      "required": ["method"],
+      "required": [
+        "method"
+      ],
       "additionalProperties": false
     },
     "lines": {
@@ -46,18 +105,67 @@
       "items": {
         "type": "object",
         "properties": {
-          "description": { "type": ["string", "null"] },
-          "qty": { "type": ["number", "null"] },
-          "unit_price": { "$ref": "common.schema.json#/$defs/amount" },
-          "amount": { "$ref": "common.schema.json#/$defs/amount" },
-          "tax_rate": { "type": ["number", "null"] },
-          "account": { "type": ["string", "null"] }
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "qty": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "unit_price": {
+            "$ref": "common.schema.json#/$defs/amount"
+          },
+          "amount": {
+            "$ref": "common.schema.json#/$defs/amount"
+          },
+          "tax_rate": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "account": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
         },
-        "required": ["description", "amount"],
+        "required": [
+          "description",
+          "amount"
+        ],
         "additionalProperties": false
       }
+    },
+    "foreign_total": {
+      "description": "外貨建ての場合の、その通貨での合計。★円換算はここでしない。カード会社の換算率は証憑に書かれた率と違うため、円の額はカード明細行を正とする（第1部 §6）",
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "foreign_rate_on_document": {
+      "description": "証憑に書かれていた換算率。参考値であって、実際の請求額の根拠ではない",
+      "type": [
+        "number",
+        "null"
+      ]
     }
   },
-  "required": ["issuer", "issued_at", "currency", "total", "tax_breakdown", "payment", "lines"],
+  "required": [
+    "issuer",
+    "issued_at",
+    "currency",
+    "total",
+    "tax_breakdown",
+    "payment",
+    "lines"
+  ],
   "unevaluatedProperties": false
 }

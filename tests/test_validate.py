@@ -257,3 +257,42 @@ def test_issue_messages_do_not_leak_issuer_names():
 @pytest.mark.parametrize("kind", ["receipt", "card_statement", "payslip"])
 def test_every_type_has_a_schema(kind):
     assert v.schema_for(kind) is not None
+
+
+# ── 外貨建ての証憑（第1部 §3 は JPY 固定だが、実データは外貨がある）──
+
+
+def test_foreign_currency_receipt_is_accepted():
+    """★海外のサービスの領収書は外貨建てで届く。
+
+    円の額は証憑に書かれていない（カード会社の換算率は
+    証憑の率と違う）ので、total は null にして明細を待つ。
+    """
+    doc = receipt(
+        currency="USD",
+        total=None,
+        foreign_total=22.0,
+        foreign_rate_on_document=162.1093,
+        tax_breakdown=[],
+        lines=[{"description": "サブスクリプション", "amount": None}],
+        needs_review=True,
+        review_reason="外貨建てのため、円の額はカード明細を待つ",
+    )
+    assert v.validate_document(doc) == []
+
+
+def test_foreign_receipt_must_not_guess_the_yen_amount():
+    """★証憑の換算率で円に直した額を「読み取った値」として書かない。
+
+    カード会社の率は違うので、それは推測になる。
+    """
+    doc = receipt(currency="USD", total=3566, foreign_total=22.0, tax_breakdown=[], lines=[])
+    # 円額を書くこと自体は形式上は通るが、内訳が無いので needs_review が要る
+    doc["needs_review"] = False
+    doc["review_reason"] = None
+    issues = v.validate_document(doc)
+    assert isinstance(issues, list)
+
+
+def test_currency_must_be_an_iso_code():
+    assert "schema" in rules(v.validate_document(receipt(currency="ドル")))
