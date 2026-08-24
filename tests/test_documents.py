@@ -126,3 +126,81 @@ def test_a_genuinely_zero_yen_receipt_is_kept(tmp_path):
     receipts, _lines, _accounts = load_month(root, "2026-04")
     assert len(receipts) == 1
     assert receipts[0].total == 0
+
+
+# ── カード明細行の月の振り分け ──────────────────────────
+#
+# ★締め期間は暦月をまたぐ（例 4/16〜5/15）。
+#   明細を「締め期間の開始月」でまとめて振り分けると、期間の後半の行が
+#   領収書と別の月に落ちる。両者は突合の候補にすら上がらないので、
+#   **同じ支出が領収書と明細行の2件として元帳に入る。**
+#   実際 2026-05-15 の Anthropic 3,602円 が2回計上されていた。
+
+
+def _statement_doc(transactions, **over):
+    doc = {
+        "schema_version": 1,
+        "doc_id": "doc_2026-06-10_cardstatement_a1b2c3",
+        "type": "card_statement",
+        "source": {
+            "original_ref": "sha256:" + "cd" * 32,
+            "original_ext": "pdf",
+            "ingested_at": "2026-06-11T10:00:00+09:00",
+            "extractor": {"skill": "s", "skill_version": "1", "model": "m"},
+        },
+        "origin": "electronic",
+        "paper_retained": None,
+        "account": "Liabilities:Personal:CreditCard:A",
+        "period": {"from": "2026-04-16", "to": "2026-05-15"},
+        "statement_total": sum(t["amount"] for t in transactions),
+        "debit_date": "2026-06-10",
+        "transactions": transactions,
+        "needs_review": False,
+        "review_reason": None,
+    }
+    doc.update(over)
+    return doc
+
+
+def _write_statement(tmp_path, doc):
+    d = tmp_path / "2026" / "06"
+    d.mkdir(parents=True)
+    (d / f"{doc['doc_id']}.json").write_text(json.dumps(doc, ensure_ascii=False), encoding="utf-8")
+    return tmp_path
+
+
+_SPLIT = [
+    {"line_id": "L001", "date": "2026-04-20", "raw_description": "四月の買い物", "amount": 1000},
+    {"line_id": "L002", "date": "2026-05-15", "raw_description": "五月の買い物", "amount": 2000},
+]
+
+
+def test_card_lines_are_bucketed_by_their_own_date(tmp_path):
+    root = _write_statement(tmp_path, _statement_doc(_SPLIT))
+    _receipts, april, _accounts = load_month(root, "2026-04")
+    assert [line.line_id for line in april] == ["L001"]
+
+
+def test_the_tail_of_a_period_lands_in_its_own_month(tmp_path):
+    """★ここが壊れていた。5/15 の行が 2026-04 に落ち、5月の領収書と会えなかった。"""
+    root = _write_statement(tmp_path, _statement_doc(_SPLIT))
+    _receipts, may, _accounts = load_month(root, "2026-05")
+    assert [line.line_id for line in may] == ["L002"]
+
+
+def test_no_card_line_is_loaded_into_two_months(tmp_path):
+    """1行を2つの月に入れると、その月の元帳を両方生成した時点で二重計上になる。"""
+    root = _write_statement(tmp_path, _statement_doc(_SPLIT))
+    seen = [
+        line.line_id
+        for month in ("2026-04", "2026-05", "2026-06")
+        for line in load_month(root, month)[1]
+    ]
+    assert sorted(seen) == ["L001", "L002"]
+
+
+def test_the_debit_month_holds_no_lines_of_its_own(tmp_path):
+    """引落月（6月）は締め期間の外。利用日が6月の行だけが入る。"""
+    root = _write_statement(tmp_path, _statement_doc(_SPLIT))
+    _receipts, june, _accounts = load_month(root, "2026-06")
+    assert june == []

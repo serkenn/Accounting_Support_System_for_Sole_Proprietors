@@ -37,7 +37,7 @@ def _receipt_account(doc: dict) -> str | None:
 def load_month(documents: Path, month: str) -> tuple[list[Receipt], list[CardLine], dict[str, str]]:
     """指定した年月に関係する領収書とカード明細行を読む。
 
-    領収書は発行日で、カード明細は対象期間で絞る。
+    領収書は発行日で、カード明細行は利用日で絞る（どちらも暦月）。
     3つめは doc_id → 費用科目（領収書の側で指定されたもの）。
     """
     receipts: list[Receipt] = []
@@ -73,10 +73,14 @@ def load_month(documents: Path, month: str) -> tuple[list[Receipt], list[CardLin
             if account:
                 receipt_accounts[doc["doc_id"]] = account
         elif doc.get("type") == "card_statement":
-            period = doc.get("period") or {}
-            if not str(period.get("from", "")).startswith(month):
-                continue
             for t in doc.get("transactions", []):
+                # ★明細行は「その行の利用日」で月に分ける。締め期間で分けない。
+                #   締め期間は暦月をまたぐ（例 4/16〜5/15）ので、期間で分けると
+                #   5/15 の明細行が 2026-04 に、その領収書が 2026-05 に落ちる。
+                #   別の月に落ちた両者は突合の候補にすら上がらず、
+                #   **同じ支出が領収書と明細行の2件として元帳に入る。**
+                if not str(t.get("date", "")).startswith(month):
+                    continue
                 card_lines.append(
                     CardLine(
                         statement_doc_id=doc["doc_id"],
